@@ -9,21 +9,22 @@
 
 int main(const int argc, const char* argv[])
 {
-    if (argc == 1)
-        OpenLogFile(argv[0]);
-    else
-        OpenLogFile(argv[1]);
+    OpenLogFile(argv[0]);
 
     Stack_t          stk   = {};
     struct ErrorInfo error = {};
 
     spu_t spu = {};
 
-    SPUCtor(&spu);
+    if (argc == 1)
+        SPUCtor(&spu, &stk);
+    else
+        SPUCtor(&spu, &stk, argv[1]);
 
-    RunSPU(&spu);
+    error.code = (ERRORS) RunSPU(&spu);
+    EXIT_IF_ERROR(&error);
 
     SPUDtor(&spu);
-    
+
     return 0;
 }
