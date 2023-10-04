@@ -49,7 +49,18 @@ int PrintError(FILE* fp, const void* err, const char* func, const char* file, co
             LOG_END();
             return (int) error->code;
 
+        case (ERRORS::SPU_ERROR):
+            fprintf(fp, "ERROR WHILE SPU PROCESSING\n");
+            LOG_END();
+            return (int) error->code;
+
+        case (ERRORS::ASM_ERROR):
+            fprintf(fp, "ASSEMBLING ERROR\n");
+            LOG_END();
+            return (int) error->code;
+
         case (ERRORS::UNKNOWN):
+        // fall through
         default:
             fprintf(fp, "UNKNOWN ERROR\n");
             LOG_END();

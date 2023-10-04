@@ -1,7 +1,5 @@
-#ifndef __ASSEMBLER_H_
-#define __ASSEMBLER_H_
-
-#include <stdio.h>
+#ifndef __COMMANDS_H_
+#define __COMMANDS_H_
 
 enum class CommandCode
 {
@@ -9,18 +7,26 @@ enum class CommandCode
 
     out  =  0,
 
-    push =  1,
-    in   =  2,
+    push,
+    in,
 
-    sub  =  3,
-    add  =  4,
-    mul  =  5,
-    div  =  6,
-    sqrt =  7,
-    sin  =  8,
-    cos  =  9,
+    sub,
+    add,
+    mul,
+    div,
+    sqrt,
+    sin,
+    cos,
 
-    unk  = 10
+    unk
+};
+
+enum class CommandErrors
+{
+    OK = 0,
+
+    UNKNOWN_CODE,
+    UNKNOWN_WORD
 };
 
 static const size_t MAX_COMMAND_LEN = 10;
@@ -43,8 +49,5 @@ static const char* SIN  = "sin";
 static const char* COS  = "cos";
 
 //---------------------------------------
-
-CommandCode HandleCommand(const char* command);
-void ClearInput(FILE* fp);
 
 #endif

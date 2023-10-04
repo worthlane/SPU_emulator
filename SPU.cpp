@@ -3,11 +3,19 @@
 
 #include "SPU.h"
 #include "errors.h"
-#include "assembler.h"
-
+#include "asm/commands.h"
 
 static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;
+
+static int CommandPush(spu_t* spu_info);
+static int CommandOutput(spu_t* spu_info);
+static int CommandSubstract(spu_t* spu_info);
+static int CommandAdd(spu_t* spu_info);
+static int CommandMultiply(spu_t* spu_info);
+static int CommandDivide(spu_t* spu_info);
+
+static void ClearInput(FILE* fp);
 
 //-------------------------------------------------------------
 
@@ -57,38 +65,38 @@ int SPUDtor(spu_t* spu_info)
 
 int RunSPU(spu_t* spu_info)
 {
-    int error = (int) ERRORS::NONE;
-    char        command[MAX_COMMAND_LEN] = "";
-    CommandCode command_code             = CommandCode::hlt;
+    int error   = (int) ERRORS::NONE;
+    int command = 0;
+    CommandCode command_code = CommandCode::hlt;
 
     while (true)
     {
-        fscanf(spu_info->fp, "%s", command);
+        fscanf(spu_info->fp, "%d", &command);
 
-        command_code = HandleCommand(command);
+        command_code = (CommandCode) command;
 
         switch (command_code)
         {
             case (CommandCode::push):
-                error = Push(spu_info);
+                error = CommandPush(spu_info);
                 break;
             case (CommandCode::in):
                 printf("in\n");
                 break;
             case (CommandCode::out):
-                error = Output(spu_info);
+                error = CommandOutput(spu_info);
                 break;
             case (CommandCode::sub):
-                error = Substract(spu_info);
+                error = CommandSubstract(spu_info);
                 break;
             case (CommandCode::add):
-                error = Add(spu_info);
+                error = CommandAdd(spu_info);
                 break;
             case (CommandCode::mul):
-                error = Multiply(spu_info);
+                error = CommandMultiply(spu_info);
                 break;
             case (CommandCode::div):
-                error = Divide(spu_info);
+                error = CommandDivide(spu_info);
                 break;
             case (CommandCode::sqrt):
                 printf("sqrt\n");
@@ -104,7 +112,7 @@ int RunSPU(spu_t* spu_info)
             case (CommandCode::unk):
                 // fall through
             default:
-                return (int) ERRORS::UNKNOWN; // TODO error
+                return (int) ERRORS::SPU_ERROR; // TODO error
 
         }
         RETURN_IF_ERROR(error);
@@ -113,7 +121,7 @@ int RunSPU(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int Push(spu_t* spu_info)
+static int CommandPush(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
     elem_t val = POISON;
@@ -124,7 +132,7 @@ int Push(spu_t* spu_info)
     if (val_read == 0)
         return (int) ERRORS::UNKNOWN; // TODO add error
 
-    error = StackPush(&(spu_info->stack), val);
+    error = StackPush(&(spu_info->stack), val * MULTIPLIER);
     RETURN_IF_ERROR(error);
 
     return error;
@@ -132,7 +140,7 @@ int Push(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int Output(spu_t* spu_info)
+static int CommandOutput(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
 
@@ -141,14 +149,14 @@ int Output(spu_t* spu_info)
     error = StackPop(&(spu_info->stack), &val);
     RETURN_IF_ERROR(error);
 
-    printf(PRINT_ELEM_T "\n", val);
+    printf("%g\n", (double) val / MULTIPLIER);
 
     return error;
 }
 
 //-------------------------------------------------------------
 
-int Substract(spu_t* spu_info)
+static int CommandSubstract(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
 
@@ -170,7 +178,7 @@ int Substract(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int Add(spu_t* spu_info)
+static int CommandAdd(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
 
@@ -192,7 +200,7 @@ int Add(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int Multiply(spu_t* spu_info)
+static int CommandMultiply(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
 
@@ -204,7 +212,7 @@ int Multiply(spu_t* spu_info)
     error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
-    elem_t result = val2 * val1;
+    elem_t result = (val2 * val1) / MULTIPLIER;
 
     error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
@@ -214,7 +222,7 @@ int Multiply(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int Divide(spu_t* spu_info)
+static int CommandDivide(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
 
@@ -226,11 +234,19 @@ int Divide(spu_t* spu_info)
     error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
-    elem_t result = val2 / val1;
+    elem_t result = (MULTIPLIER * val2) / val1;
 
     error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
 
     return error;
+}
+
+//-------------------------------------------------------------
+
+static void ClearInput(FILE* fp)
+{
+    int ch = 0;
+    while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
 }
 

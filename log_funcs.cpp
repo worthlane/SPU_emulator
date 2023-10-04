@@ -5,7 +5,6 @@
 #include <strings.h>
 
 #include "log_funcs.h"
-#include "stack.h"
 
 static FILE* __LOG_STREAM__ = stderr;
 

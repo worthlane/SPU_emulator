@@ -1,5 +1,5 @@
 CXX = g++-13
-EXECUTABLE = stack
+EXECUTABLE = asm
 CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations \
 			-Wc++14-compat -Wmissing-declarations -Wcast-align -Wcast-qual -Wchar-subscripts       \
 			-Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wempty-body -Wfloat-equal  \
@@ -13,14 +13,12 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 			-Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation    \
 			-fstack-protector -fstrict-overflow -fno-omit-frame-pointer -Wlarger-than=8192         \
 			-Wstack-usage=8192 -fPIE -Werror=vla
-BUILD_DIR = build/bin
-OBJECTS_DIR = build
-SOURCES = main.cpp stack.cpp log_funcs.cpp errors.cpp hash.cpp SPU.cpp
+BUILD_DIR = ../build/bin
+OBJECTS_DIR = ../build
+SOURCES = main.cpp assembler.cpp ../log_funcs.cpp ../errors.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
-DOXYFILE = Doxyfile
-DOXYBUILD = doxygen $(DOXYFILE)
 
-.PHONY: all asm
+.PHONY: all
 all: $(BUILD_DIR)/$(EXECUTABLE)
 
 $(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
@@ -29,18 +27,12 @@ $(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
 $(OBJECTS_DIR)/%.o : %.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
-asm:
-	cd asm && make && cd ..
-
-.PHONY: doxybuild clean install test
-
-doxybuild:
-	$(DOXYBUILD)
+.PHONY: clean makedirs test
 
 clean:
 	rm -rf $(BUILD_DIR)/$(EXECUTABLE) $(OBJECTS_DIR)/*.o
 
-install:
+makedirs:
 	mkdir -p $(BUILD_DIR)
 
 test:

@@ -20,12 +20,5 @@ int SPUCtor(spu_t* spu_info, const char* file_name = DEFAULT_FILE);
 int SPUDtor(spu_t* spu_info);
 int RunSPU(spu_t* spu_info);
 
-int Push(spu_t* spu_info);
-int Output(spu_t* spu_info);
-int Substract(spu_t* spu_info);
-int Add(spu_t* spu_info);
-int Multiply(spu_t* spu_info);
-int Divide(spu_t* spu_info);
-
 
 #endif

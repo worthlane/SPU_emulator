@@ -50,6 +50,9 @@ enum class ERRORS
     /// invalid stack error
     INVALID_STACK,
 
+    ASM_ERROR,
+    SPU_ERROR,
+
     /// unknown error
     UNKNOWN
 };

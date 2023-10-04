@@ -1,0 +1,4 @@
+push 300
+push 100
+out
+hlt
