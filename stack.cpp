@@ -354,12 +354,6 @@ static hash_t GetDataHash(const Stack_t* stk)
         elem_t* data = stk->data;
         size_t data_size = stk->capacity * sizeof(elem_t);
 
-        ON_CANARY
-        (
-            data      = (elem_t*)((char*) data - sizeof(canary_t));
-            data_size = data_size + 2 * sizeof(canary_t)
-        );
-
         new_hash = stk->hash_func(data, data_size);
     );
 
@@ -374,7 +368,16 @@ static hash_t GetStackHash(const Stack_t* stk)
 
     hash_t new_hash = 0;
 
+    size_t stk_size    = sizeof(Stack_t);
+    const Stack_t* stack_ptr = stk;
+
 #pragma GCC diagnostic ignored "-Wcast-qual"
+    ON_CANARY
+    (
+        stk_size -= 2 * sizeof(canary_t);
+        stack_ptr = (Stack_t*) ((char*) stk + sizeof(canary_t));
+    )
+
     ON_HASH
     (
         hash_t stack_hash = stk->stack_hash;
@@ -382,11 +385,11 @@ static hash_t GetStackHash(const Stack_t* stk)
         ((Stack_t*) stk)->status     = 0;
         ((Stack_t*) stk)->stack_hash = 0;
 
-        new_hash = stk->hash_func(stk, sizeof(Stack_t));
+        new_hash = stk->hash_func(stack_ptr, stk_size);
 
         ((Stack_t*) stk)->stack_hash = stack_hash;
-        ((Stack_t*) stk)->status     = status
-    );
+        ((Stack_t*) stk)->status     = status;
+    )
 #pragma GCC diagnostic warning "-Wcast-qual"
 
     return new_hash;;

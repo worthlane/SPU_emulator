@@ -17,14 +17,15 @@ int main(const int argc, const char* argv[])
     spu_t spu = {};
 
     if (argc == 1)
-        SPUCtor(&spu, &stk);
+        SPUCtor(&spu);
     else
-        SPUCtor(&spu, &stk, argv[1]);
+        SPUCtor(&spu, argv[1]);
 
     error.code = (ERRORS) RunSPU(&spu);
     EXIT_IF_ERROR(&error);
 
     SPUDtor(&spu);
+
 
     return 0;
 }

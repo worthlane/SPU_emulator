@@ -11,11 +11,11 @@ static const int MAX_FILE_LEN = 100;
 
 //-------------------------------------------------------------
 
-int SPUCtor(spu_t* spu_info, Stack_t* stk, const char* file_name)
+int SPUCtor(spu_t* spu_info, const char* file_name)
 {
     int error = (int) ERRORS::NONE;
 
-    error = StackCtor(stk);
+    error = StackCtor(&(spu_info->stack));
     RETURN_IF_ERROR(error);
 
     FILE* fp = nullptr;
@@ -31,7 +31,6 @@ int SPUCtor(spu_t* spu_info, Stack_t* stk, const char* file_name)
 
     spu_info->file_name = file_name;
     spu_info->fp        = fp;
-    spu_info->stack     = stk;
 
     return error;
 }
@@ -42,7 +41,7 @@ int SPUDtor(spu_t* spu_info)
 {
     int error = (int) ERRORS::NONE;
 
-    error = StackDtor((spu_info->stack));
+    error = StackDtor(&(spu_info->stack));
     RETURN_IF_ERROR(error);
 
     if (spu_info->fp != stdin)
@@ -59,8 +58,8 @@ int SPUDtor(spu_t* spu_info)
 int RunSPU(spu_t* spu_info)
 {
     int error = (int) ERRORS::NONE;
-    char command[MAX_COMMAND_LEN] = "";
-    CommandCode command_code = CommandCode::hlt;
+    char        command[MAX_COMMAND_LEN] = "";
+    CommandCode command_code             = CommandCode::hlt;
 
     while (true)
     {
@@ -102,6 +101,8 @@ int RunSPU(spu_t* spu_info)
                 break;
             case (CommandCode::hlt):
                 return (int) ERRORS::NONE;
+            case (CommandCode::unk):
+                // fall through
             default:
                 return (int) ERRORS::UNKNOWN; // TODO error
 
@@ -117,13 +118,13 @@ int Push(spu_t* spu_info)
     int error  = (int) ERRORS::NONE;
     elem_t val = POISON;
 
-    size_t val_read = fscanf(spu_info->fp, PRINT_ELEM_T, &val);
+    int val_read = fscanf(spu_info->fp, PRINT_ELEM_T, &val);
     ClearInput(spu_info->fp);
 
     if (val_read == 0)
         return (int) ERRORS::UNKNOWN; // TODO add error
 
-    error = StackPush((spu_info->stack), val);
+    error = StackPush(&(spu_info->stack), val);
     RETURN_IF_ERROR(error);
 
     return error;
@@ -137,7 +138,7 @@ int Output(spu_t* spu_info)
 
     elem_t val = POISON;
 
-    error = StackPop((spu_info->stack), &val);
+    error = StackPop(&(spu_info->stack), &val);
     RETURN_IF_ERROR(error);
 
     printf(PRINT_ELEM_T "\n", val);
@@ -154,14 +155,14 @@ int Substract(spu_t* spu_info)
     elem_t val1 = POISON;
     elem_t val2 = POISON;
 
-    error = StackPop((spu_info->stack), &val1);
+    error = StackPop(&(spu_info->stack), &val1);
     RETURN_IF_ERROR(error);
-    error = StackPop((spu_info->stack), &val2);
+    error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
     elem_t result = val2 - val1;
 
-    error = StackPush((spu_info->stack), result);
+    error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
 
     return error;
@@ -176,14 +177,14 @@ int Add(spu_t* spu_info)
     elem_t val1 = POISON;
     elem_t val2 = POISON;
 
-    error = StackPop((spu_info->stack), &val1);
+    error = StackPop(&(spu_info->stack), &val1);
     RETURN_IF_ERROR(error);
-    error = StackPop((spu_info->stack), &val2);
+    error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
     elem_t result = val2 + val1;
 
-    error = StackPush((spu_info->stack), result);
+    error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
 
     return error;
@@ -198,14 +199,14 @@ int Multiply(spu_t* spu_info)
     elem_t val1 = POISON;
     elem_t val2 = POISON;
 
-    error = StackPop((spu_info->stack), &val1);
+    error = StackPop(&(spu_info->stack), &val1);
     RETURN_IF_ERROR(error);
-    error = StackPop((spu_info->stack), &val2);
+    error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
     elem_t result = val2 * val1;
 
-    error = StackPush((spu_info->stack), result);
+    error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
 
     return error;
@@ -220,14 +221,14 @@ int Divide(spu_t* spu_info)
     elem_t val1 = POISON;
     elem_t val2 = POISON;
 
-    error = StackPop((spu_info->stack), &val1);
+    error = StackPop(&(spu_info->stack), &val1);
     RETURN_IF_ERROR(error);
-    error = StackPop((spu_info->stack), &val2);
+    error = StackPop(&(spu_info->stack), &val2);
     RETURN_IF_ERROR(error);
 
     elem_t result = val2 / val1;
 
-    error = StackPush((spu_info->stack), result);
+    error = StackPush(&(spu_info->stack), result);
     RETURN_IF_ERROR(error);
 
     return error;

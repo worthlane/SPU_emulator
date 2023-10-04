@@ -7,7 +7,7 @@
 
 struct SPUInfo
 {
-    Stack_t*    stack;
+    Stack_t     stack;
     const char* file_name;
     FILE*       fp;
 };
@@ -16,7 +16,7 @@ typedef struct SPUInfo spu_t;
 
 static const char* DEFAULT_FILE = "stdin";
 
-int SPUCtor(spu_t* spu_info, Stack_t* stk, const char* file_name = DEFAULT_FILE);
+int SPUCtor(spu_t* spu_info, const char* file_name = DEFAULT_FILE);
 int SPUDtor(spu_t* spu_info);
 int RunSPU(spu_t* spu_info);
 
