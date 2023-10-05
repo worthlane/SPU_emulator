@@ -2,8 +2,8 @@
 #include <assert.h>
 
 #include "stack.h"
-#include "log_funcs.h"
-#include "hash.h"
+#include "../log_funcs.h"
+#include "../hash.h"
 
 // ============= STATIC FUNCS ===============
 static inline bool EmptyStackCheck(Stack_t* stk);

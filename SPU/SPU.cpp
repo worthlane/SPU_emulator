@@ -1,9 +1,10 @@
 #include <strings.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "SPU.h"
-#include "errors.h"
-#include "asm/commands.h"
+#include "../errors.h"
+#include "../asm/commands.h"
 
 static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;
@@ -14,6 +15,9 @@ static int CommandSubstract(spu_t* spu_info);
 static int CommandAdd(spu_t* spu_info);
 static int CommandMultiply(spu_t* spu_info);
 static int CommandDivide(spu_t* spu_info);
+static int CommandSqrt(spu_t* spu_info);
+static int CommandCos(spu_t* spu_info);
+static int CommandSin(spu_t* spu_info);
 
 static void ClearInput(FILE* fp);
 
@@ -63,8 +67,10 @@ int SPUDtor(spu_t* spu_info)
 
 //-------------------------------------------------------------
 
-int RunSPU(spu_t* spu_info)
+int RunSPU(spu_t* spu_info) // убрать spu_info
 {
+    // засунуть SPUCtor
+
     int error   = (int) ERRORS::NONE;
     int command = 0;
     CommandCode command_code = CommandCode::hlt;
@@ -117,6 +123,10 @@ int RunSPU(spu_t* spu_info)
         }
         RETURN_IF_ERROR(error);
     }
+
+    // засунуть SPUDtor
+
+    return error;
 }
 
 //-------------------------------------------------------------
@@ -237,6 +247,44 @@ static int CommandDivide(spu_t* spu_info)
     elem_t result = (MULTIPLIER * val2) / val1;
 
     error = StackPush(&(spu_info->stack), result);
+    RETURN_IF_ERROR(error);
+
+    return error;
+}
+
+//-------------------------------------------------------------
+
+static int CommandSqrt(spu_t* spu_info)
+{
+    int error  = (int) ERRORS::NONE;
+
+    elem_t val1 = POISON;
+
+    error = StackPop(&(spu_info->stack), &val1);
+    RETURN_IF_ERROR(error);
+
+    val1 = (elem_t) sqrt((long double) (val1 * MULTIPLIER));
+
+    error = StackPush(&(spu_info->stack), val1);
+    RETURN_IF_ERROR(error);
+
+    return error;
+}
+
+//-------------------------------------------------------------
+
+static int CommandCos(spu_t* spu_info)
+{
+    int error  = (int) ERRORS::NONE;
+
+    elem_t val1 = POISON;
+
+    error = StackPop(&(spu_info->stack), &val1);
+    RETURN_IF_ERROR(error);
+
+    // TODO val1 = (elem_t) cos((long double) );
+
+    error = StackPush(&(spu_info->stack), val1);
     RETURN_IF_ERROR(error);
 
     return error;

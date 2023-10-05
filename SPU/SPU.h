@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "stack.h"
+#include "../stack/stack.h"
 
 struct SPUInfo
 {
@@ -14,9 +14,9 @@ struct SPUInfo
 
 typedef struct SPUInfo spu_t;
 
-static const char* DEFAULT_FILE = "stdin";
+static const char* DEFAULT_IN  = "../assets/machine_code.txt";
 
-int SPUCtor(spu_t* spu_info, const char* file_name = DEFAULT_FILE);
+int SPUCtor(spu_t* spu_info, const char* file_name = DEFAULT_IN);
 int SPUDtor(spu_t* spu_info);
 int RunSPU(spu_t* spu_info);
 

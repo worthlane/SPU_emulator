@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#include "commands.h"
+
 CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream);
 
 #endif

@@ -1,18 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "stack.h"
-#include "log_funcs.h"
-#include "types.h"
-#include "hash.h"
+#include "../stack/stack.h"
+#include "../log_funcs.h"
+#include "../types.h"
+#include "../hash.h"
 #include "SPU.h"
 
 int main(const int argc, const char* argv[])
 {
     OpenLogFile(argv[0]);
 
-    Stack_t          stk   = {};
-    struct ErrorInfo error = {};
+    Stack_t   stk   = {};
+    ErrorInfo error = {};
 
     spu_t spu = {};
 

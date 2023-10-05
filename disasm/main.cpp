@@ -1,12 +1,12 @@
 #include <stdio.h>
 
-#include "assembler.h"
-#include "commands.h"
+#include "disassembler.h"
+#include "../asm/commands.h"
 #include "../log_funcs.h"
 #include "../errors.h"
 
-static const char* DEFAULT_IN  = "../assets/asm_code.txt";
-static const char* DEFAULT_OUT = "../assets/machine_code.txt";
+static const char* DEFAULT_OUT = "../assets/asm_code.txt";
+static const char* DEFAULT_IN  = "../assets/machine_code.txt";
 
 int main(const int argc, const char* argv[])
 {
@@ -47,7 +47,7 @@ int main(const int argc, const char* argv[])
         EXIT_IF_ERROR(&error);
     }
 
-    CommandErrors asm_err = HandleCommand(in_stream, out_stream);
+    CommandErrors asm_err = HandleCode(in_stream, out_stream);
     if (asm_err != CommandErrors::OK)
     {
         error.code = ERRORS::ASM_ERROR;
