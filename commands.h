@@ -1,11 +1,13 @@
 #ifndef __COMMANDS_H_
 #define __COMMANDS_H_
 
+#include <stdio.h>
+
 enum class CommandCode
 {
     hlt  = -1,
 
-    out  =  0,
+    out  =  228,
 
     push,
     in,
@@ -30,6 +32,17 @@ enum class CommandErrors
 };
 
 static const size_t MAX_COMMAND_LEN = 10;
+
+static const char* CODE_WORD = "deco";
+
+//=============REGISTERS================
+
+static const char* RAX = "rax";
+static const char* RBX = "rbx";
+static const char* RCX = "rcx";
+static const char* RDX = "rdx";
+
+//======================================
 
 //--------------COMMANDS LIST------------
 

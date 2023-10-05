@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../asm/commands.h"
+#include "../commands.h"
 
 CommandErrors HandleCode(FILE* in_stream, FILE* out_stream);
 

@@ -15,27 +15,27 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 			-Wstack-usage=8192 -fPIE -Werror=vla
 BUILD_DIR = build/bin
 OBJECTS_DIR = build
-SOURCES = main.cpp ../stack/stack.cpp ../log_funcs.cpp ../errors.cpp ../hash.cpp SPU.cpp
+SOURCES = main.cpp stack.cpp ../log_funcs.cpp ../errors.cpp ../hash.cpp SPU.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
 DOXYFILE = Doxyfile
 DOXYBUILD = doxygen $(DOXYFILE)
 
 .PHONY: all
-all: $(BUILD_DIR)/$(EXECUTABLE)
+all: $(EXECUTABLE)
 
-$(BUILD_DIR)/$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS)
 	$(CXX) $^ -o $@ $(CXXFLAGS)
 
 $(OBJECTS_DIR)/%.o : %.cpp
 	$(CXX) $(CXXFLAGS) -c $^ -o $@
 
-.PHONY: doxybuild clean install test
+.PHONY: doxybuild clean makedirs test
 
 doxybuild:
 	$(DOXYBUILD)
 
 clean:
-	rm -rf $(BUILD_DIR)/$(EXECUTABLE) $(OBJECTS_DIR)/*.o
+	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o *.o
 
 makedirs:
 	mkdir -p $(BUILD_DIR)

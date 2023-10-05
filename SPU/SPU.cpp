@@ -4,7 +4,7 @@
 
 #include "SPU.h"
 #include "../errors.h"
-#include "../asm/commands.h"
+#include "../commands.h"
 
 static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;
@@ -105,13 +105,13 @@ int RunSPU(spu_t* spu_info) // убрать spu_info
                 error = CommandDivide(spu_info);
                 break;
             case (CommandCode::sqrt):
-                printf("sqrt\n");
+                error = CommandSqrt(spu_info);
                 break;
             case (CommandCode::sin):
-                printf("sin\n");
+                error = CommandSin(spu_info);
                 break;
             case (CommandCode::cos):
-                printf("out\n");
+                error = CommandCos(spu_info);
                 break;
             case (CommandCode::hlt):
                 return (int) ERRORS::NONE;
@@ -134,13 +134,15 @@ int RunSPU(spu_t* spu_info) // убрать spu_info
 static int CommandPush(spu_t* spu_info)
 {
     int error  = (int) ERRORS::NONE;
-    elem_t val = POISON;
+    double a = 0;
 
-    int val_read = fscanf(spu_info->fp, PRINT_ELEM_T, &val);
+    int val_read = fscanf(spu_info->fp, "%lg", &a);
     ClearInput(spu_info->fp);
 
     if (val_read == 0)
         return (int) ERRORS::UNKNOWN; // TODO add error
+
+    elem_t val = (elem_t) a;
 
     error = StackPush(&(spu_info->stack), val * MULTIPLIER);
     RETURN_IF_ERROR(error);
@@ -282,7 +284,26 @@ static int CommandCos(spu_t* spu_info)
     error = StackPop(&(spu_info->stack), &val1);
     RETURN_IF_ERROR(error);
 
-    // TODO val1 = (elem_t) cos((long double) );
+    val1 = (elem_t) (cos((long double) val1 / MULTIPLIER) * MULTIPLIER);
+
+    error = StackPush(&(spu_info->stack), val1);
+    RETURN_IF_ERROR(error);
+
+    return error;
+}
+
+//-------------------------------------------------------------
+
+static int CommandSin(spu_t* spu_info)
+{
+    int error  = (int) ERRORS::NONE;
+
+    elem_t val1 = POISON;
+
+    error = StackPop(&(spu_info->stack), &val1);
+    RETURN_IF_ERROR(error);
+
+    val1 = (elem_t) (sin((long double) val1 / MULTIPLIER) * MULTIPLIER);
 
     error = StackPush(&(spu_info->stack), val1);
     RETURN_IF_ERROR(error);

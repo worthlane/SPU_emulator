@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../stack/stack.h"
+#include "stack.h"
 
 struct SPUInfo
 {
@@ -14,7 +14,7 @@ struct SPUInfo
 
 typedef struct SPUInfo spu_t;
 
-static const char* DEFAULT_IN  = "../assets/machine_code.txt";
+static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
 
 int SPUCtor(spu_t* spu_info, const char* file_name = DEFAULT_IN);
 int SPUDtor(spu_t* spu_info);

@@ -1,12 +1,12 @@
 #include <stdio.h>
 
 #include "disassembler.h"
-#include "../asm/commands.h"
+#include "../commands.h"
 #include "../log_funcs.h"
 #include "../errors.h"
 
-static const char* DEFAULT_OUT = "../assets/asm_code.txt";
-static const char* DEFAULT_IN  = "../assets/machine_code.txt";
+static const char* DEFAULT_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";
+static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
 
 int main(const int argc, const char* argv[])
 {

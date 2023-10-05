@@ -1,4 +1,6 @@
-push 300
+push 157
 push 100
+div
+sin
 out
 hlt

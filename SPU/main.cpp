@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../stack/stack.h"
+#include "stack.h"
 #include "../log_funcs.h"
 #include "../types.h"
 #include "../hash.h"

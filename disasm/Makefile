@@ -30,7 +30,7 @@ $(OBJECTS_DIR)/%.o : %.cpp
 .PHONY: clean makedirs test
 
 clean:
-	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o
+	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o *.o
 
 makedirs:
 	mkdir -p $(BUILD_DIR)

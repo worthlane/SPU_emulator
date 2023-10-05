@@ -1,10 +1,17 @@
-all: asm spu disasm
+all: asm disasm spu clean
 
 asm:
-    cd asm && makedirs && make && cd ..
-
-spu:
-    cd SPU && makedirs && make && cd ..
+	cd asm && make makedirs && make && cd ..
 
 disasm:
-    cd disasm && makedirs && make && cd ..
+	cd disasm && make makedirs && make && cd ..
+
+spu:
+	cd SPU && make makedirs && make && cd ..
+
+clean:
+	cd asm && make clean && cd ..
+	cd disasm && make clean && cd ..
+	cd SPU && make clean && cd ..
+
+.PHONY: asm disasm spu clean

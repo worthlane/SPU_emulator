@@ -15,22 +15,27 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 			-Wstack-usage=8192 -fPIE -Werror=vla
 BUILD_DIR = build/bin
 OBJECTS_DIR = build
-SOURCES = main.cpp assembler.cpp ../log_funcs.cpp ../errors.cpp
+SOURCES = main.cpp assembler.cpp
+OUT_SOURCES = ../log_funcs.cpp ../errors.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
+OUT_OBJECTS = $(OUT_SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
 
 .PHONY: all
 all: $(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS) $(OUT_OBJECTS)
 	$(CXX) $^ -o $@ $(CXXFLAGS)
 
 $(OBJECTS_DIR)/%.o : %.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+	$(CXX)  -c $^ -o $@ $(CXXFLAGS)
 
-.PHONY: clean makedirs test
+.PHONY: clean makedirs test t
+
+t:
+	echo $(A)
 
 clean:
-	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o
+	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o *.o
 
 makedirs:
 	mkdir -p $(BUILD_DIR)
