@@ -10,6 +10,7 @@ struct SPUInfo
     Stack_t     stack;
     const char* file_name;
     FILE*       fp;
+    elem_t      registers[REG_AMT];
 };
 
 typedef struct SPUInfo spu_t;

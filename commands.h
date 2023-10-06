@@ -42,6 +42,16 @@ static const char* RBX = "rbx";
 static const char* RCX = "rcx";
 static const char* RDX = "rdx";
 
+enum RegisterCode
+{
+    rax = 0,
+    rbx,
+    rcx,
+    rdx
+};
+
+static const size_t REG_AMT = 4;
+
 //======================================
 
 //--------------COMMANDS LIST------------
