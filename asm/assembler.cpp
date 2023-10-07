@@ -11,8 +11,10 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
     assert(in_stream);
     assert(out_stream);
 
-    char* byte_buf = (char*) calloc(info->text_len, sizeof(char));
+    char* byte_buf = (char*) calloc(info->text_len + SIGNATURE_LEN, sizeof(char));
     char* current_byte = byte_buf;
+
+    current_byte = AddSignature(current_byte);
 
     if (byte_buf == nullptr)
     {
@@ -66,7 +68,7 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
         current_byte = PrintRemainingString(info->lines[line].string + strlen(command), current_byte);
     }
 
-    PrintBuf(out_stream, byte_buf, info->text_len);
+    PrintBuf(out_stream, byte_buf, info->text_len + SIGNATURE_LEN);
 
     free(byte_buf);
 

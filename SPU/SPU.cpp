@@ -74,8 +74,14 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 ERRORS RunSPU(ErrorInfo* error, spu_t* spu)
 {
-    char command[10] = "";
-    CommandCode command_code = CommandCode::hlt;
+    CommandErrors cmd_err = VerifySignature(spu->curr_input_byte, SIGNATURE, SPU_VER);
+    if (cmd_err != CommandErrors::OK)
+        return ERRORS::SPU_ERROR;
+
+    spu->curr_input_byte += SIGNATURE_LEN;
+
+    char command[MAX_COMMAND_LEN] = "";
+    CommandCode      command_code = CommandCode::hlt;
 
     while (true)
     {

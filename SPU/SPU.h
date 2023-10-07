@@ -10,12 +10,16 @@
 struct SPUInfo
 {
     Stack_t     stack;
+
     const char* file_name;
     FILE*       fp;
     char*       input_buf;
     char*       curr_input_byte;
+
     elem_t      registers[REG_AMT];
 };
+
+static const int SPU_VER = 2;
 
 typedef struct SPUInfo spu_t;
 

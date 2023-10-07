@@ -3,6 +3,9 @@
 
 #include <stdio.h>
 
+#include "types.h"
+#include "input_and_output.h"
+
 enum class CommandCode
 {
     hlt  = -1,
@@ -30,12 +33,18 @@ enum class CommandErrors
     ALLOCATE_MEM,
 
     UNKNOWN_CODE,
-    UNKNOWN_WORD
+    UNKNOWN_WORD,
+
+    INCORRECT_SIGNATURE,
+    INCORRECT_VERSION
 };
 
-static const size_t MAX_COMMAND_LEN = 10;
+static const signature_t SIGNATURE = 'DEC0';
+static const int         ASM_VER   = 2;
 
-static const char* CODE_WORD = "deco";
+//           signature len ---------v        v----- version len
+static const size_t SIGNATURE_LEN = 10 + 2 + 1;
+//     space + next string symbols ------^
 
 //=============REGISTERS================
 
@@ -55,6 +64,8 @@ enum RegisterCode
 static const size_t REG_AMT = 4;
 
 //======================================
+
+static const size_t MAX_COMMAND_LEN = 10;
 
 //--------------COMMANDS LIST------------
 
@@ -76,5 +87,8 @@ static const char* COS  = "cos";
 //---------------------------------------
 
 char* PrintRemainingString(const char* const source, char* dest);
+
+char* AddSignature(char* current_byte);
+CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
 
 #endif

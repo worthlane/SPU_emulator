@@ -12,7 +12,10 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
     assert(in_stream);
     assert(out_stream);
 
-    CommandErrors error = CommandErrors::OK;
+    CommandErrors error = VerifySignature(info->buf, SIGNATURE, ASM_VER);
+    if (error != CommandErrors::OK)
+        return error;
+
     char command[10] = "";
     CommandCode command_code = CommandCode::hlt;
 
@@ -28,7 +31,7 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
         return CommandErrors::ALLOCATE_MEM;
     }
 
-    for (size_t line = 0; line < info->line_amt; line++)
+    for (size_t line = 1; line < info->line_amt; line++)
     {
         sscanf(info->lines[line].string, "%s", command);
         size_t code_len = strlen(command);

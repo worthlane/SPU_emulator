@@ -5,6 +5,8 @@
 * \brief Contains enumerated errors
 */
 
+#include <stdio.h>
+
 #ifdef EXIT_IF_ERROR
 #undef EXIT_IF_ERROR
 
