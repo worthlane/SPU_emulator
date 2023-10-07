@@ -11,21 +11,21 @@ int main(const int argc, const char* argv[])
 {
     OpenLogFile(argv[0]);
 
-    Stack_t   stk   = {};
-    ErrorInfo error = {};
+    ErrorInfo error = {ERRORS::NONE};
 
     spu_t spu = {};
 
     if (argc == 1)
-        SPUCtor(&spu);
+        SPUCtor(&error, &spu);
     else
-        SPUCtor(&spu, argv[1]);
+        SPUCtor(&error, &spu, argv[1]);
 
-    error.code = (ERRORS) RunSPU(&spu);
     EXIT_IF_ERROR(&error);
 
-    SPUDtor(&spu);
+    error.code = RunSPU(&error, &spu);
+    EXIT_IF_ERROR(&error);
 
+    SPUDtor(&error, &spu);
 
     return 0;
 }

@@ -17,7 +17,7 @@ BUILD_DIR = ../build/bin
 OBJECTS_DIR = ../build/spu
 COMMON_DIR = ../common
 SOURCES = main.cpp stack.cpp SPU.cpp
-OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp ../common/hash.cpp
+OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp ../common/hash.cpp ../common/input_and_output.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
 OUT_OBJECTS = $(OUT_SOURCES:$(COMMON_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
 
