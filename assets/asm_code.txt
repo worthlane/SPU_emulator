@@ -1,6 +1,6 @@
-push 157
-push 100
+push 300
+push 400
+push 200
+sub
 div
-sin
 out
-hlt

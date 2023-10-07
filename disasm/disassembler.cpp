@@ -94,6 +94,8 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
 
     PrintBuf(out_stream, asm_buf, info->text_len);
 
+    free(asm_buf);
+
     return CommandErrors::OK;
 }
 

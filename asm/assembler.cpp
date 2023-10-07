@@ -68,6 +68,8 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
 
     PrintBuf(out_stream, byte_buf, info->text_len);
 
+    free(byte_buf);
+
     return CommandErrors::OK;
 }
 

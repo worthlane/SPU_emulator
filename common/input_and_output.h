@@ -119,4 +119,6 @@ inline void DestructTextStorage(struct Storage* info)
 FILE* OpenInputFile(const char* input_file, Storage* info, ErrorInfo* error);
 FILE* OpenOutputFile(const char* output_file, ErrorInfo* error);
 
+int AllocateBuf(FILE* fp, char** buf, const off_t buf_len, struct ErrorInfo* error);
+
 #endif

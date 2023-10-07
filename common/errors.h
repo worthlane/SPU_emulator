@@ -23,7 +23,7 @@
 #endif
 #define RETURN_IF_ERROR(error)              do                                                          \
                                             {                                                           \
-                                                if ((error) != (int) ERRORS::NONE)                      \
+                                                if ((error) != ERRORS::NONE)                            \
                                                 {                                                       \
                                                     return error;                                       \
                                                 }                                                       \
@@ -52,7 +52,7 @@ enum class ERRORS
 
     ASM_ERROR,
     DISASM_ERROR,
-    
+
     SPU_ERROR,
 
     /// unknown error

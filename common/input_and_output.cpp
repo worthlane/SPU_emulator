@@ -9,7 +9,6 @@
 
 static int FillLineStruct(struct ErrorInfo* error,
                           size_t line_amt, off_t text_len, char* buf, struct LineInfo* lines);
-static int AllocateBuf(FILE* fp, char** buf, const off_t buf_len, struct ErrorInfo* error);
 static int AllocateLines(struct LineInfo** lines, char* buf, const off_t text_len,
                          size_t* line_amt, struct ErrorInfo* error);
 
@@ -39,7 +38,7 @@ static int AllocateLines(struct LineInfo** lines, char* buf, const off_t text_le
 
 //-------------------------------------------------------------------------------------------
 
-static int AllocateBuf(FILE* fp, char** buf, const off_t buf_len, struct ErrorInfo* error)
+int AllocateBuf(FILE* fp, char** buf, const off_t buf_len, struct ErrorInfo* error)
 {
     // Add 1 for NUL-terminator --v
     *buf = (char* ) calloc(buf_len + 1, sizeof(char));
