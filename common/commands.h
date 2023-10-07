@@ -75,4 +75,6 @@ static const char* COS  = "cos";
 
 //---------------------------------------
 
+char* PrintRemainingString(const char* const source, char* dest);
+
 #endif

@@ -59,6 +59,11 @@ int PrintError(FILE* fp, const void* err, const char* func, const char* file, co
             LOG_END();
             return (int) error->code;
 
+        case (ERRORS::DISASM_ERROR):
+            fprintf(fp, "DISASSEMBLING ERROR\n");
+            LOG_END();
+            return (int) error->code;
+
         case (ERRORS::UNKNOWN):
         // fall through
         default:

@@ -1,63 +1,80 @@
 #include <strings.h>
 #include <assert.h>
+#include <stdlib.h>
 
 #include "disassembler.h"
 #include "../common/log_funcs.h"
 
-
-static void PrintRemainingString(FILE* in_stream, FILE* out_stream);
 static void ClearInput(FILE* fp);
 
-CommandErrors HandleCode(FILE* in_stream, FILE* out_stream)
+CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
 {
     assert(in_stream);
     assert(out_stream);
 
     CommandErrors error = CommandErrors::OK;
-    int command = 0;
+    char command[10] = "";
     CommandCode command_code = CommandCode::hlt;
 
-    while (true)
-    {
-        fscanf(in_stream,"%d", &command);
+    char* asm_buf = (char*) calloc(info->text_len, sizeof(char));
+    char* current_byte = asm_buf;
 
-        command_code = (CommandCode) command;
+    if (asm_buf == nullptr)
+    {
+        PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
+                 "ERROR: FAILED TO ALLOCATE MEMORY\n"
+                 "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"); // TODO обернуть нормально потом
+
+        return CommandErrors::ALLOCATE_MEM;
+    }
+
+    for (size_t line = 0; line < info->line_amt; line++)
+    {
+        sscanf(info->lines[line].string, "%s", command);
+        size_t code_len = strlen(command);
+
+        long command_id = strtol(command, nullptr, 10);
+
+        command_code = (CommandCode) command_id;
+
+        bool  quit_cycle_flag = false;
 
         switch (command_code)
         {
             case (CommandCode::push):
-                fprintf(out_stream, "%s", PUSH);
+                current_byte += sprintf(current_byte, "%s", PUSH);
                 break;
             case (CommandCode::in):
-                fprintf(out_stream, "%s", IN);
+                current_byte += sprintf(current_byte, "%s", IN);
                 break;
             case (CommandCode::out):
-                fprintf(out_stream, "%s", OUT);
+                current_byte += sprintf(current_byte, "%s", OUT);
                 break;
             case (CommandCode::sub):
-                fprintf(out_stream, "%s", SUB);
+                current_byte += sprintf(current_byte, "%s", SUB);
                 break;
             case (CommandCode::add):
-                fprintf(out_stream, "%s", ADD);
+                current_byte += sprintf(current_byte, "%s", ADD);
                 break;
             case (CommandCode::mul):
-                fprintf(out_stream, "%s", MUL);
+                current_byte += sprintf(current_byte, "%s", MUL);
                 break;
             case (CommandCode::div):
-                fprintf(out_stream, "%s", DIV);
+                current_byte += sprintf(current_byte, "%s", DIV);
                 break;
             case (CommandCode::sqrt):
-                fprintf(out_stream, "%s", SQRT);
+                current_byte += sprintf(current_byte, "%s", SQRT);
                 break;
             case (CommandCode::sin):
-                fprintf(out_stream, "%s", SIN);
+                current_byte += sprintf(current_byte, "%s", SIN);
                 break;
             case (CommandCode::cos):
-                fprintf(out_stream, "%s", OUT);
+                current_byte += sprintf(current_byte, "%s", OUT);
                 break;
             case (CommandCode::hlt):
-                fprintf(out_stream, "%s", HLT);
-                return CommandErrors::OK;
+                current_byte += sprintf(current_byte, "%s", HLT);
+                quit_cycle_flag = true;
+                break;
             case (CommandCode::unk):
                 // fall through
             default:
@@ -68,25 +85,16 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream)
             return CommandErrors::UNKNOWN_WORD;
         }
 
-        PrintRemainingString(in_stream, out_stream);
-        fputc('\n', out_stream);
+        if (quit_cycle_flag)
+            break;
+
+        current_byte = PrintRemainingString(info->lines[line].string + code_len,
+                                            current_byte);
     }
+
+    PrintBuf(out_stream, asm_buf, info->text_len);
 
     return CommandErrors::OK;
-}
-
-//------------------------------------------------------------------
-
-static void PrintRemainingString(FILE* in_stream, FILE* out_stream)
-{
-    assert(in_stream);
-    assert(out_stream);
-
-    int ch = 0;
-    while ((ch = fgetc(in_stream)) != '\n' && ch != EOF)
-    {
-        fputc(ch, out_stream);
-    }
 }
 
 //------------------------------------------------------------------

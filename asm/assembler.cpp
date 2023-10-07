@@ -4,7 +4,6 @@
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
-static char* PrintRemainingString(const char* const source, char* dest);
 static void ClearInput(FILE* fp);
 
 CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
@@ -70,30 +69,6 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
     PrintBuf(out_stream, byte_buf, info->text_len);
 
     return CommandErrors::OK;
-}
-
-//------------------------------------------------------------------
-
-static char* PrintRemainingString(const char* const source, char* destination)
-{
-    assert(source);
-    assert(destination);
-
-    const char* src = source;
-    char* dest = destination;
-
-    while (*src != '\n' && *src != EOF && *src != '\0')
-    {
-        *dest = *src;
-
-        src++;
-        dest++;
-    }
-
-    *dest = *src;
-    dest++;
-
-    return dest;
 }
 
 //------------------------------------------------------------------

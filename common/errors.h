@@ -51,6 +51,8 @@ enum class ERRORS
     INVALID_STACK,
 
     ASM_ERROR,
+    DISASM_ERROR,
+    
     SPU_ERROR,
 
     /// unknown error
