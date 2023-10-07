@@ -3,9 +3,9 @@
 
 #include <stdio.h>
 
-#include "../errors.h"
-#include "../log_funcs.h"
-#include "../types.h"
+#include "../common/errors.h"
+#include "../common/log_funcs.h"
+#include "../common/types.h"
 
 /*! \file
 * \brief Contains hash functions

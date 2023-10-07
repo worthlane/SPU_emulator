@@ -1,9 +1,9 @@
 #include <stdio.h>
 
 #include "disassembler.h"
-#include "../commands.h"
-#include "../log_funcs.h"
-#include "../errors.h"
+#include "../common/commands.h"
+#include "../common/log_funcs.h"
+#include "../common/errors.h"
 
 static const char* DEFAULT_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";
 static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";

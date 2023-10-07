@@ -2,9 +2,9 @@
 #include <stdlib.h>
 
 #include "stack.h"
-#include "../log_funcs.h"
-#include "../types.h"
-#include "../hash.h"
+#include "../common/log_funcs.h"
+#include "../common/types.h"
+#include "../common/hash.h"
 #include "SPU.h"
 
 int main(const int argc, const char* argv[])

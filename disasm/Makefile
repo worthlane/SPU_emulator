@@ -13,19 +13,25 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 			-Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation    \
 			-fstack-protector -fstrict-overflow -fno-omit-frame-pointer -Wlarger-than=8192         \
 			-Wstack-usage=8192 -fPIE -Werror=vla
-BUILD_DIR = build/bin
-OBJECTS_DIR = build
-SOURCES = main.cpp disassembler.cpp ../log_funcs.cpp ../errors.cpp
+BUILD_DIR = ../build/bin
+OBJECTS_DIR = ../build/disasm
+COMMON_DIR = ../common
+SOURCES = main.cpp disassembler.cpp
+OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
+OUT_OBJECTS = $(OUT_SOURCES:$(COMMON_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
 
 .PHONY: all
 all: $(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS) $(OUT_OBJECTS)
 	$(CXX) $^ -o $@ $(CXXFLAGS)
 
-$(OBJECTS_DIR)/%.o : %.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+$(OBJECTS_DIR)/%.o: $(COMMON_DIR)/%.cpp
+	$(CXX)  -c $^ -o $@ $(CXXFLAGS)
+
+$(OBJECTS_DIR)/%.o: %.cpp
+	$(CXX)  -c $^ -o $@ $(CXXFLAGS)
 
 .PHONY: clean makedirs test
 
@@ -34,6 +40,7 @@ clean:
 
 makedirs:
 	mkdir -p $(BUILD_DIR)
+	mkdir -p $(OBJECTS_DIR)
 
 test:
 	$(CXX) $(CXXFLAGS) $(SOURCES)

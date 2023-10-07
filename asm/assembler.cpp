@@ -2,47 +2,59 @@
 #include <assert.h>
 
 #include "assembler.h"
-#include "../log_funcs.h"
+#include "../common/log_funcs.h"
 
-static void PrintRemainingString(FILE* in_stream, FILE* out_stream);
+static char* PrintRemainingString(const char* const source, char* dest);
 static void ClearInput(FILE* fp);
 
-CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream)
+CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
 {
     assert(in_stream);
     assert(out_stream);
 
+    char* byte_buf = (char*) calloc(info->text_len, sizeof(char));
+    char* current_byte = byte_buf;
+
+    if (byte_buf == nullptr)
+    {
+        PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
+                 "ERROR: FAILED TO ALLOCATE MEMORY\n"
+                 "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"); // TODO обернуть нормально потом
+
+        return CommandErrors::ALLOCATE_MEM;
+    }
+
     char command[MAX_COMMAND_LEN] = "";
 
-    while (true)
+    for (size_t line = 0; line < info->line_amt; line++)
     {
-        fscanf(in_stream,"%s", command);
+        sscanf(info->lines[line].string,"%s", command);
 
         if (!strncmp(command, HLT, MAX_COMMAND_LEN))
         {
-            fprintf(out_stream, "%d", (int) CommandCode::hlt);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::hlt);
             break;
         }
         else if (!strncmp(command, OUT, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::out);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::out);
         else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::push);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::push);
         else if (!strncmp(command, IN, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::in);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::in);
         else if (!strncmp(command, SUB, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::sub);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sub);
         else if (!strncmp(command, ADD, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::add);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::add);
         else if (!strncmp(command, MUL, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::mul);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::mul);
         else if (!strncmp(command, DIV, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::div);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::div);
         else if (!strncmp(command, SQRT, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::sqrt);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sqrt);
         else if (!strncmp(command, SIN, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::sin);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sin);
         else if (!strncmp(command, COS, MAX_COMMAND_LEN))
-            fprintf(out_stream, "%d", (int) CommandCode::cos);
+            current_byte += sprintf(current_byte, "%d", (int) CommandCode::cos);
         else
         {
             PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
@@ -52,25 +64,36 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream)
             return CommandErrors::UNKNOWN_WORD;
         }
 
-        PrintRemainingString(in_stream, out_stream);
-        fputc('\n', out_stream);
+        current_byte = PrintRemainingString(info->lines[line].string + strlen(command), current_byte);
     }
+
+    PrintBuf(out_stream, byte_buf, info->text_len);
 
     return CommandErrors::OK;
 }
 
 //------------------------------------------------------------------
 
-static void PrintRemainingString(FILE* in_stream, FILE* out_stream)
+static char* PrintRemainingString(const char* const source, char* destination)
 {
-    assert(in_stream);
-    assert(out_stream);
+    assert(source);
+    assert(destination);
 
-    int ch = 0;
-    while ((ch = fgetc(in_stream)) != '\n' && ch != EOF)
+    const char* src = source;
+    char* dest = destination;
+
+    while (*src != '\n' && *src != EOF && *src != '\0')
     {
-        fputc(ch, out_stream);
+        *dest = *src;
+
+        src++;
+        dest++;
     }
+
+    *dest = *src;
+    dest++;
+
+    return dest;
 }
 
 //------------------------------------------------------------------

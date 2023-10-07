@@ -13,5 +13,6 @@ clean:
 	cd asm && make clean && cd ..
 	cd disasm && make clean && cd ..
 	cd SPU && make clean && cd ..
+	cd common && rm -rf *.o && cd ..
 
 .PHONY: asm disasm spu clean

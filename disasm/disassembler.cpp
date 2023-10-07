@@ -2,7 +2,7 @@
 #include <assert.h>
 
 #include "disassembler.h"
-#include "../log_funcs.h"
+#include "../common/log_funcs.h"
 
 
 static void PrintRemainingString(FILE* in_stream, FILE* out_stream);

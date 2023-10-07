@@ -3,8 +3,8 @@
 #include <math.h>
 
 #include "SPU.h"
-#include "../errors.h"
-#include "../commands.h"
+#include "../common/errors.h"
+#include "../common/commands.h"
 
 static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;

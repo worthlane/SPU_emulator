@@ -13,32 +13,34 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 			-Wno-old-style-cast -Wno-varargs -Wstack-protector -fcheck-new -fsized-deallocation    \
 			-fstack-protector -fstrict-overflow -fno-omit-frame-pointer -Wlarger-than=8192         \
 			-Wstack-usage=8192 -fPIE -Werror=vla
-BUILD_DIR = build/bin
-OBJECTS_DIR = build
-SOURCES = main.cpp stack.cpp ../log_funcs.cpp ../errors.cpp ../hash.cpp SPU.cpp
+BUILD_DIR = ../build/bin
+OBJECTS_DIR = ../build/spu
+COMMON_DIR = ../common
+SOURCES = main.cpp stack.cpp SPU.cpp
+OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp ../common/hash.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
-DOXYFILE = Doxyfile
-DOXYBUILD = doxygen $(DOXYFILE)
+OUT_OBJECTS = $(OUT_SOURCES:$(COMMON_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
 
 .PHONY: all
 all: $(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS)
+$(EXECUTABLE): $(OBJECTS) $(OUT_OBJECTS)
 	$(CXX) $^ -o $@ $(CXXFLAGS)
 
-$(OBJECTS_DIR)/%.o : %.cpp
-	$(CXX) $(CXXFLAGS) -c $^ -o $@
+$(OBJECTS_DIR)/%.o: $(COMMON_DIR)/%.cpp
+	$(CXX)  -c $^ -o $@ $(CXXFLAGS)
 
-.PHONY: doxybuild clean makedirs test
+$(OBJECTS_DIR)/%.o: %.cpp
+	$(CXX)  -c $^ -o $@ $(CXXFLAGS)
 
-doxybuild:
-	$(DOXYBUILD)
+.PHONY: clean makedirs test
 
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o *.o
 
 makedirs:
 	mkdir -p $(BUILD_DIR)
+	mkdir -p $(OBJECTS_DIR)
 
 test:
 	$(CXX) $(CXXFLAGS) $(SOURCES)

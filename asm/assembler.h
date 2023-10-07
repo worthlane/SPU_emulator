@@ -3,8 +3,9 @@
 
 #include <stdio.h>
 
-#include "../commands.h"
+#include "../common/commands.h"
+#include "../common/input_and_output.h"
 
-CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream);
+CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info);
 
 #endif

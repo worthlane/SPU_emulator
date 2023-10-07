@@ -27,6 +27,8 @@ enum class CommandErrors
 {
     OK = 0,
 
+    ALLOCATE_MEM,
+
     UNKNOWN_CODE,
     UNKNOWN_WORD
 };

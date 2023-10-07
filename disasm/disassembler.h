@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../commands.h"
+#include "../common/commands.h"
 
 CommandErrors HandleCode(FILE* in_stream, FILE* out_stream);
 

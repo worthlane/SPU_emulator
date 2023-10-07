@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "stack.h"
+#include "../common/commands.h"
 
 struct SPUInfo
 {
