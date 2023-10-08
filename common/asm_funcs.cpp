@@ -76,3 +76,26 @@ RegisterCode TranslateRegisterToByte(const char* reg)
     else
         return RegisterCode::unk;
 }
+
+//------------------------------------------------------------------
+
+CommandErrors RegVerify(RegisterCode reg)
+{
+    switch (reg)
+    {
+        case (RegisterCode::rax):
+            break;
+        case (RegisterCode::rbx):
+            break;
+        case (RegisterCode::rcx):
+            break;
+        case (RegisterCode::rdx):
+            break;
+        case (RegisterCode::unk):
+            // fall through
+        default:
+            return CommandErrors::INVALID_REGISTER;
+    }
+
+    return CommandErrors::OK;
+}

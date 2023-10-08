@@ -106,5 +106,6 @@ char* PrintRemainingString(const char* const source, char* dest);
 char* AddSignature(char* current_byte);
 CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
 RegisterCode TranslateRegisterToByte(const char* reg);
+CommandErrors RegVerify(RegisterCode reg);
 
 #endif

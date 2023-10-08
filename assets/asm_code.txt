@@ -1,10 +1,11 @@
 push 300
 push 400
-push rcx
-pop rcx
-sub
-div
 out
+pop rcx
+push rcx
+push rcx
+push rcx
+mul
 out
 hlt
 

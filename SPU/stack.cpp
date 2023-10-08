@@ -23,7 +23,6 @@ static inline void ReInitAllHashes(Stack_t* stk);
 
 static int StackRealloc(Stack_t* stk, size_t new_capacity);
 
-static inline bool IsStackValid(Stack* stack, const char* func, const char* file, const int line);
 static void PrintStackCondition(const Stack_t* stk);
 static int PrintStackData(FILE* fp, const Stack_t* stk);
 
@@ -33,15 +32,6 @@ static bool PoisonVerify(Stack_t* stk);
 static bool Equal(const elem_t a, const elem_t b);
 //============================================
 
-#ifdef CHECK_STACK
-#undef CHECK_STACK
-
-#endif
-#define CHECK_STACK(stk)    do                                                          \
-                            {                                                           \
-                                if (!IsStackValid(stk, __func__, __FILE__, __LINE__))   \
-                                    return (int) ERRORS::INVALID_STACK;                 \
-                            } while(0)
 
 // =============CONSTS============
 static const canary_t canary_val = 0xD07ADEAD;
@@ -581,7 +571,7 @@ static void PrintStackCondition(const Stack_t* stk)
 
 //-----------------------------------------------------------------------------------------------------
 
-static inline bool IsStackValid(Stack* stack, const char* func, const char* file, const int line)
+bool IsStackValid(Stack* stack, const char* func, const char* file, const int line)
 {
     StackOk(stack);
     if (stack->status != OK)

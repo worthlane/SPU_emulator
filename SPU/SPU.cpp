@@ -10,19 +10,26 @@
 static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;
 
-static ERRORS CommandPush(spu_t* spu);
+static void PrintRegisters(FILE* fp, const spu_t* spu);
 
-static ERRORS CommandOutput(spu_t* spu);
+static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push);
 
-// static ERRORS CommandPop(spu_t* spu);
+// =========== COMMANDS =========
 
-static ERRORS CommandSubstract(spu_t* spu);
-static ERRORS CommandAdd(spu_t* spu);
-static ERRORS CommandMultiply(spu_t* spu);
-static ERRORS CommandDivide(spu_t* spu);
-static ERRORS CommandSqrt(spu_t* spu);
-static ERRORS CommandCos(spu_t* spu);
-static ERRORS CommandSin(spu_t* spu);
+static SPUErrors CommandOutput(spu_t* spu);
+
+static SPUErrors CommandPush(spu_t* spu);
+static SPUErrors CommandPop(spu_t* spu);
+
+static SPUErrors CommandSubstract(spu_t* spu);
+static SPUErrors CommandAdd(spu_t* spu);
+static SPUErrors CommandMultiply(spu_t* spu);
+static SPUErrors CommandDivide(spu_t* spu);
+static SPUErrors CommandSqrt(spu_t* spu);
+static SPUErrors CommandCos(spu_t* spu);
+static SPUErrors CommandSin(spu_t* spu);
+
+// ==============================
 
 static void ClearInput(FILE* fp);
 
@@ -52,6 +59,7 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
     spu->curr_input_byte = buffer;
     spu->file_name       = file_name;
     spu->fp              = fp;
+    spu->status          = SPUErrors::NONE;
 
     return error->code;
 }
@@ -70,17 +78,18 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
     spu->fp              = nullptr;
     spu->curr_input_byte = nullptr;
     spu->input_buf       = nullptr;
+    spu->status          = SPUErrors::DESTRUCTED;
 
     return error->code;
 }
 
 //-------------------------------------------------------------
 
-ERRORS RunSPU(ErrorInfo* error, spu_t* spu)
+SPUErrors RunSPU(spu_t* spu)
 {
     CommandErrors cmd_err = VerifySignature(spu->curr_input_byte, SIGNATURE, SPU_VER);
     if (cmd_err != CommandErrors::OK)
-        return ERRORS::SPU_ERROR;
+        return (spu->status = SPUErrors::WRONG_SIGNATURE);
 
     spu->curr_input_byte += SIGNATURE_LEN;
 
@@ -96,83 +105,90 @@ ERRORS RunSPU(ErrorInfo* error, spu_t* spu)
         switch (command_code)
         {
             case (CommandCode::push):
-                error->code = CommandPush(spu);
+                spu->status = CommandPush(spu);
                 break;
             case (CommandCode::in):
                 printf("in\n");
                 break;
             case (CommandCode::out):
-                error->code = CommandOutput(spu);
+                spu->status = CommandOutput(spu);
                 break;
             case (CommandCode::sub):
-                error->code = CommandSubstract(spu);
+                spu->status = CommandSubstract(spu);
                 break;
             case (CommandCode::add):
-                error->code = CommandAdd(spu);
+                spu->status = CommandAdd(spu);
                 break;
             case (CommandCode::mul):
-                error->code = CommandMultiply(spu);
+                spu->status = CommandMultiply(spu);
                 break;
             case (CommandCode::div):
-                error->code = CommandDivide(spu);
+                spu->status = CommandDivide(spu);
                 break;
             case (CommandCode::sqrt):
-                error->code = CommandSqrt(spu);
+                spu->status = CommandSqrt(spu);
                 break;
             case (CommandCode::sin):
-                error->code = CommandSin(spu);
+                spu->status = CommandSin(spu);
                 break;
             case (CommandCode::cos):
-                error->code = CommandCos(spu);
+                spu->status = CommandCos(spu);
+                break;
+            case (CommandCode::pop):
+                spu->status = CommandPop(spu);
                 break;
             case (CommandCode::hlt):
-                return ERRORS::NONE;
+                return SPUErrors::NONE;
             case (CommandCode::unk):
                 // fall through
             default:
-                return ERRORS::SPU_ERROR; // TODO error
+                return SPUErrors::UNKNOWN_COMMAND;
 
         }
-        RETURN_IF_ERROR(error->code);
+        RETURN_IF_SPUERROR(spu->status);
     }
-    return error->code;
+    return spu->status;
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandPush(spu_t* spu)
+static SPUErrors CommandPush(spu_t* spu)
 {
-    ERRORS error = ERRORS::NONE;
+    PushInfo push = {};
 
-    double a = strtod(spu->curr_input_byte, &(spu->curr_input_byte));
-
-    elem_t val = (elem_t) a;
-
-    error = (ERRORS) StackPush(&(spu->stack), val * MULTIPLIER);
-    RETURN_IF_ERROR(error);
-
-    return error;
-}
-
-//-------------------------------------------------------------
-
-static ERRORS CommandOutput(spu_t* spu)
-{
-    ERRORS error = ERRORS::NONE;
+    push.reg = (unsigned int) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
+    push.val = (elem_t) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
 
     elem_t val = POISON;
 
-    error = (ERRORS) StackPop(&(spu->stack), &val);
-    RETURN_IF_ERROR(error);
+    spu->status = HandlePushSPU(spu, &val, &push);
+    RETURN_IF_SPUERROR(spu->status);
 
-    printf("%g\n", (double) val / MULTIPLIER);
+    ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);
+    if (push_err != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return spu->status;
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandSubstract(spu_t* spu)
+static SPUErrors CommandOutput(spu_t* spu)
+{
+    elem_t val = POISON;
+
+    ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
+    if (pop_err != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
+
+    printf("%g\n", (double) val / MULTIPLIER);
+
+    return (spu->status = SPUErrors::NONE);
+}
+
+//-------------------------------------------------------------
+
+static SPUErrors CommandSubstract(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
@@ -180,21 +196,25 @@ static ERRORS CommandSubstract(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
+
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     elem_t result = val2 - val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandAdd(spu_t* spu)
+static SPUErrors CommandAdd(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
@@ -202,21 +222,24 @@ static ERRORS CommandAdd(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     elem_t result = val2 + val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandMultiply(spu_t* spu)
+static SPUErrors CommandMultiply(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
@@ -224,21 +247,25 @@ static ERRORS CommandMultiply(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
+
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     elem_t result = (val2 * val1) / MULTIPLIER;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandDivide(spu_t* spu)
+static SPUErrors CommandDivide(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
@@ -246,73 +273,106 @@ static ERRORS CommandDivide(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
+
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     elem_t result = (MULTIPLIER * val2) / val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandSqrt(spu_t* spu)
+static SPUErrors CommandSqrt(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     val1 = (elem_t) sqrt((long double) (val1 * MULTIPLIER));
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandCos(spu_t* spu)
+static SPUErrors CommandCos(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     val1 = (elem_t) (cos((long double) val1 / MULTIPLIER) * MULTIPLIER);
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
 
-static ERRORS CommandSin(spu_t* spu)
+static SPUErrors CommandSin(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
 
     val1 = (elem_t) (sin((long double) val1 / MULTIPLIER) * MULTIPLIER);
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_IF_ERROR(error);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::PUSH_ERROR);
 
-    return error;
+    return (spu->status = SPUErrors::NONE);
+}
+
+//-------------------------------------------------------------
+
+static SPUErrors CommandPop(spu_t* spu)
+{
+    ERRORS error = ERRORS::NONE;
+
+    RegisterCode reg = (RegisterCode) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
+
+    CommandErrors reg_err = RegVerify(reg);
+    if (reg_err != CommandErrors::OK)
+        return (spu->status = SPUErrors::UNKNOWN_REGISTER);
+
+    elem_t val1 = POISON;
+
+    error = (ERRORS) StackPop(&(spu->stack), &val1);
+    if (error != ERRORS::NONE)
+        return (spu->status = SPUErrors::POP_ERROR);
+
+    spu->registers[reg] = val1;
+
+    return (spu->status = SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -323,3 +383,110 @@ static void ClearInput(FILE* fp)
     while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
 }
 
+//-------------------------------------------------------------
+
+static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push)
+{
+    assert(spu);
+    assert(push);
+    assert(val);
+
+    if (push->reg == 1)
+    {
+        CommandErrors reg_err = RegVerify((RegisterCode) push->val);
+        if (reg_err != CommandErrors::OK)
+            return (spu->status = SPUErrors::UNKNOWN_REGISTER);
+
+        if (spu->registers[push->val] == POISON)
+            return (spu->status = SPUErrors::EMPTY_REGISTER);
+
+        *val = spu->registers[push->val];
+    }
+    else if (push->reg == 0)
+    {
+        *val = push->val * MULTIPLIER;
+    }
+    else
+        return (spu->status = SPUErrors::UNKNOWN_PUSH_MODE);
+
+    return (spu->status = SPUErrors::NONE);
+}
+
+//-------------------------------------------------------------
+
+SPUErrors SPUVerify(spu_t* spu, const char* func, const char* file, const int line)
+{
+    assert(spu);
+    assert(func);
+    assert(file);
+
+    if (spu->status != SPUErrors::NONE)
+        return spu->status;
+
+    if (!IsStackValid(&(spu->stack), func, file, line))
+        return (spu->status = SPUErrors::INVALID_STACK);
+
+    if (spu->file_name == nullptr)
+        return (spu->status = SPUErrors::NO_FILE_NAME);
+
+    if (spu->fp == nullptr)
+        return (spu->status = SPUErrors::NO_FILE_POINTER);
+
+    if (spu->input_buf == nullptr)
+        return (spu->status = SPUErrors::NO_INPUT_BUFFER);
+
+    if (spu->curr_input_byte < spu->input_buf)
+        return (spu->status = SPUErrors::INVALID_BYTE_POINTER);
+
+    if (spu->registers == nullptr)
+        return (spu->status = SPUErrors::NO_REGISTERS_ARRAY);
+
+    return (spu->status = SPUErrors::NONE);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+int SPUDump(FILE* fp, const void* spu_ptr, const char* func, const char* file, const int line)
+{
+    assert(fp);
+    assert(spu_ptr);
+    assert(func);
+    assert(file);
+
+    const spu_t* spu = (const spu_t*) spu_ptr;
+
+    LOG_START_MOD(func, file, line);
+
+    fprintf(fp, "SOFTWARE PROCESSING UNIT [%p]\n\n"
+                "FILE NAME: \"%s\"\n"
+                "FILE POINTER: [%p]\n"
+                "INPUT BUFFER: [%zu]\n"
+                "CURRENT BYTE: [%zu]\n"
+                "STATUS:        %d\n"
+                "::::::::::::::::::::\n"
+                "REGISTERS:\n\n",
+                spu, spu->file_name, spu->fp, spu->input_buf, spu->curr_input_byte, spu->status);
+
+    PrintRegisters(fp, spu);
+
+    LOG_END();
+
+    return (int) spu->status;
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static void PrintRegisters(FILE* fp, const spu_t* spu)
+{
+    assert(fp);
+    assert(spu);
+
+    fprintf(fp, "%s > " PRINT_ELEM_T "\n"
+                "%s > " PRINT_ELEM_T "\n"
+                "%s > " PRINT_ELEM_T "\n"
+                "%s > " PRINT_ELEM_T "\n",
+                RAX, spu->registers[rax],
+                RBX, spu->registers[rbx],
+                RCX, spu->registers[rcx],
+                RDX, spu->registers[rdx]);
+}

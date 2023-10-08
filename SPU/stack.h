@@ -181,4 +181,16 @@ int StackDump(FILE* fp, const void* stk, const char* func, const char* file, con
  ************************************************************/
 int StackOk(const Stack_t* stk);
 
+bool IsStackValid(Stack* stack, const char* func, const char* file, const int line);
+
+#ifdef CHECK_STACK
+#undef CHECK_STACK
+
+#endif
+#define CHECK_STACK(stk)    do                                                          \
+                            {                                                           \
+                                if (!IsStackValid(stk, __func__, __FILE__, __LINE__))   \
+                                    return (int) ERRORS::INVALID_STACK;                 \
+                            } while(0)
+
 #endif
