@@ -29,5 +29,8 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu_info, const char* file_name = DEFAUL
 ERRORS SPUDtor(ErrorInfo* error, spu_t* spu_info);
 ERRORS RunSPU(ErrorInfo* error, spu_t* spu_info);
 
+enum SPUErrors
+{
+};
 
 #endif

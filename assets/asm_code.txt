@@ -1,6 +1,7 @@
 push 300
 push 400
-push 200
+push rcx
+pop rcx
 sub
 div
 out

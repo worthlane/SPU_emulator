@@ -15,6 +15,8 @@ enum class CommandCode
     push,
     in,
 
+    pop,
+
     sub,
     add,
     mul,
@@ -36,13 +38,15 @@ enum class CommandErrors
     UNKNOWN_WORD,
 
     INCORRECT_SIGNATURE,
-    INCORRECT_VERSION
+    INCORRECT_VERSION,
+
+    INVALID_REGISTER
 };
 
 static const signature_t SIGNATURE = 'DEC0';
 static const int         ASM_VER   = 2;
 
-//           signature len ---------v        v----- version len
+//           code word len ---------v        v----- version len
 static const size_t SIGNATURE_LEN = 10 + 2 + 1;
 //     space + next string symbols ------^
 
@@ -55,17 +59,26 @@ static const char* RDX = "rdx";
 
 enum RegisterCode
 {
-    rax = 0,
+    unk = -1,
+
+    rax =  0,
     rbx,
     rcx,
     rdx
 };
 
-static const size_t REG_AMT = 4;
+static const size_t REG_AMT     = 4;
+static const size_t MAX_REG_LEN = 5;
 
 //======================================
 
 static const size_t MAX_COMMAND_LEN = 10;
+
+struct PushInfo
+{
+    unsigned int reg : 1;
+    elem_t       val;
+};
 
 //--------------COMMANDS LIST------------
 
@@ -75,6 +88,8 @@ static const char* OUT  = "out";
 
 static const char* PUSH = "push";
 static const char* IN   = "in";
+
+static const char* POP  = "pop";
 
 static const char* SUB  = "sub";
 static const char* ADD  = "add";
@@ -90,5 +105,6 @@ char* PrintRemainingString(const char* const source, char* dest);
 
 char* AddSignature(char* current_byte);
 CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
+RegisterCode TranslateRegisterToByte(const char* reg);
 
 #endif

@@ -11,7 +11,11 @@ static const int MULTIPLIER   = 1000;
 static const int MAX_FILE_LEN = 100;
 
 static ERRORS CommandPush(spu_t* spu);
+
 static ERRORS CommandOutput(spu_t* spu);
+
+// static ERRORS CommandPop(spu_t* spu);
+
 static ERRORS CommandSubstract(spu_t* spu);
 static ERRORS CommandAdd(spu_t* spu);
 static ERRORS CommandMultiply(spu_t* spu);

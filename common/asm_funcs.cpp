@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <strings.h>
 
 #include "commands.h"
 #include "types.h"
@@ -58,3 +59,20 @@ CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const 
     return error;
 }
 
+//------------------------------------------------------------------
+
+RegisterCode TranslateRegisterToByte(const char* reg)
+{
+    assert(reg);
+
+    if (!strncmp(reg, RAX, MAX_REG_LEN))
+        return RegisterCode::rax;
+    else if (!strncmp(reg, RBX, MAX_REG_LEN))
+        return RegisterCode::rbx;
+    else if (!strncmp(reg, RCX, MAX_REG_LEN))
+        return RegisterCode::rcx;
+    else if (!strncmp(reg, RDX, MAX_REG_LEN))
+        return RegisterCode::rdx;
+    else
+        return RegisterCode::unk;
+}
