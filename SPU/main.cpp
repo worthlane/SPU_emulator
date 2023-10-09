@@ -26,8 +26,12 @@ int main(const int argc, const char* argv[])
 
     DUMP_SPU(&spu);
 
+    printf("%d %d %d\n", SPUErrors::NONE, spu.status, error.code);
+
     if (spu.status != SPUErrors::NONE);
-        error.code = ERRORS::SPU_ERROR;
+        error.code  = ERRORS::SPU_ERROR;
+
+    printf("%d %d %d\n", SPUErrors::NONE, spu.status, error.code);
 
     EXIT_IF_ERROR(&error);
 

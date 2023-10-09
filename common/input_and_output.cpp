@@ -270,3 +270,18 @@ FILE* OpenOutputFile(const char* output_file, ErrorInfo* error)
 
     return out_stream;
 }
+
+//-------------------------------------------------------------------------------------------
+
+FILE* OpenBinOutputFile(const char* output_file, ErrorInfo* error)
+{
+    FILE* out_stream  = fopen(output_file, "wb");
+
+    if (out_stream == nullptr)
+    {
+        error->code = ERRORS::OPEN_FILE;
+        error->data = (void*) output_file;
+    }
+
+    return out_stream;
+}

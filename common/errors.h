@@ -31,6 +31,20 @@
                                                 }                                                       \
                                             } while(0)
 
+#ifdef RETURN_CONVERTED_ERROR
+#undef RETURN_CONVERTED_ERROR
+
+#endif
+#define RETURN_CONVERTED_ERROR(check_err, expected_err, return_err)                         \
+                                                                                            \
+                            do                                                              \
+                            {                                                               \
+                                if ((check_err) != (expected_err))                          \
+                                {                                                           \
+                                    return (return_err);                                    \
+                                }                                                           \
+                            } while(0)
+
 
 /// @brief list of errors
 enum class ERRORS

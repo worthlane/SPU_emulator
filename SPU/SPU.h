@@ -91,7 +91,8 @@ int SPUDump(FILE* fp, const void* stk, const char* func, const char* file, const
 #endif
 #define DUMP_SPU(spu)       do                                                              \
                             {                                                               \
-                                LogDump(SPUDump, (spu), __func__, __FILE__, __LINE__);        \
+                                LogDump(SPUDump, (spu), __func__, __FILE__, __LINE__);      \
                             } while(0)
+
 
 #endif

@@ -6,6 +6,6 @@
 #include "../common/commands.h"
 #include "../common/input_and_output.h"
 
-CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info);
+CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info);
 
 #endif

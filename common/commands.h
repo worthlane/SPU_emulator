@@ -10,7 +10,7 @@ enum class CommandCode
 {
     hlt  = -1,
 
-    out  =  228,
+    out  =  1000 - 7,
 
     push,
     in,
@@ -28,12 +28,15 @@ enum class CommandCode
     unk
 };
 
+static const size_t MAX_BYTE_CODE_LEN = 1000;
+
 enum class CommandErrors
 {
     OK = 0,
 
     ALLOCATE_MEM,
 
+    SYNTAX_ERROR,
     UNKNOWN_CODE,
     UNKNOWN_WORD,
 
@@ -102,6 +105,7 @@ static const char* COS  = "cos";
 //---------------------------------------
 
 char* PrintRemainingString(const char* const source, char* dest);
+bool SyntaxCheckRemainingString(const char* const source);
 
 char* AddSignature(char* current_byte);
 CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);

@@ -142,7 +142,7 @@ SPUErrors RunSPU(spu_t* spu)
             case (CommandCode::unk):
                 // fall through
             default:
-                return SPUErrors::UNKNOWN_COMMAND;
+                return (spu->status = SPUErrors::UNKNOWN_COMMAND);
 
         }
         RETURN_IF_SPUERROR(spu->status);
@@ -165,8 +165,7 @@ static SPUErrors CommandPush(spu_t* spu)
     RETURN_IF_SPUERROR(spu->status);
 
     ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);
-    if (push_err != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
     return spu->status;
 }
@@ -178,12 +177,11 @@ static SPUErrors CommandOutput(spu_t* spu)
     elem_t val = POISON;
 
     ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
-    if (pop_err != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     printf("%g\n", (double) val / MULTIPLIER);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -196,20 +194,17 @@ static SPUErrors CommandSubstract(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     elem_t result = val2 - val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -222,19 +217,17 @@ static SPUErrors CommandAdd(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     elem_t result = val2 + val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -247,20 +240,17 @@ static SPUErrors CommandMultiply(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     elem_t result = (val2 * val1) / MULTIPLIER;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -273,20 +263,17 @@ static SPUErrors CommandDivide(spu_t* spu)
     elem_t val2 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     error = (ERRORS) StackPop(&(spu->stack), &val2);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     elem_t result = (MULTIPLIER * val2) / val1;
 
     error = (ERRORS) StackPush(&(spu->stack), result);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -298,16 +285,14 @@ static SPUErrors CommandSqrt(spu_t* spu)
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     val1 = (elem_t) sqrt((long double) (val1 * MULTIPLIER));
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -319,16 +304,14 @@ static SPUErrors CommandCos(spu_t* spu)
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     val1 = (elem_t) (cos((long double) val1 / MULTIPLIER) * MULTIPLIER);
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -340,16 +323,14 @@ static SPUErrors CommandSin(spu_t* spu)
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     val1 = (elem_t) (sin((long double) val1 / MULTIPLIER) * MULTIPLIER);
 
     error = (ERRORS) StackPush(&(spu->stack), val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::PUSH_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -362,17 +343,16 @@ static SPUErrors CommandPop(spu_t* spu)
 
     CommandErrors reg_err = RegVerify(reg);
     if (reg_err != CommandErrors::OK)
-        return (spu->status = SPUErrors::UNKNOWN_REGISTER);
+        return (SPUErrors::UNKNOWN_REGISTER);
 
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    if (error != ERRORS::NONE)
-        return (spu->status = SPUErrors::POP_ERROR);
+    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     spu->registers[reg] = val1;
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -395,10 +375,10 @@ static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push)
     {
         CommandErrors reg_err = RegVerify((RegisterCode) push->val);
         if (reg_err != CommandErrors::OK)
-            return (spu->status = SPUErrors::UNKNOWN_REGISTER);
+            return (SPUErrors::UNKNOWN_REGISTER);
 
         if (spu->registers[push->val] == POISON)
-            return (spu->status = SPUErrors::EMPTY_REGISTER);
+            return (SPUErrors::EMPTY_REGISTER);
 
         *val = spu->registers[push->val];
     }
@@ -407,9 +387,9 @@ static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push)
         *val = push->val * MULTIPLIER;
     }
     else
-        return (spu->status = SPUErrors::UNKNOWN_PUSH_MODE);
+        return (SPUErrors::UNKNOWN_PUSH_MODE);
 
-    return (spu->status = SPUErrors::NONE);
+    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -424,24 +404,24 @@ SPUErrors SPUVerify(spu_t* spu, const char* func, const char* file, const int li
         return spu->status;
 
     if (!IsStackValid(&(spu->stack), func, file, line))
-        return (spu->status = SPUErrors::INVALID_STACK);
+        spu->status = SPUErrors::INVALID_STACK;
 
     if (spu->file_name == nullptr)
-        return (spu->status = SPUErrors::NO_FILE_NAME);
+        spu->status = SPUErrors::NO_FILE_NAME;
 
     if (spu->fp == nullptr)
-        return (spu->status = SPUErrors::NO_FILE_POINTER);
+        spu->status = SPUErrors::NO_FILE_POINTER;
 
     if (spu->input_buf == nullptr)
-        return (spu->status = SPUErrors::NO_INPUT_BUFFER);
+        spu->status = SPUErrors::NO_INPUT_BUFFER;
 
     if (spu->curr_input_byte < spu->input_buf)
-        return (spu->status = SPUErrors::INVALID_BYTE_POINTER);
+        spu->status = SPUErrors::INVALID_BYTE_POINTER;
 
     if (spu->registers == nullptr)
-        return (spu->status = SPUErrors::NO_REGISTERS_ARRAY);
+        spu->status = SPUErrors::NO_REGISTERS_ARRAY;
 
-    return (spu->status = SPUErrors::NONE);
+    return spu->status;
 }
 
 //-----------------------------------------------------------------------------------------------------
@@ -456,6 +436,8 @@ int SPUDump(FILE* fp, const void* spu_ptr, const char* func, const char* file, c
     const spu_t* spu = (const spu_t*) spu_ptr;
 
     LOG_START_MOD(func, file, line);
+
+    STACK_DUMP(&(spu->stack));
 
     fprintf(fp, "SOFTWARE PROCESSING UNIT [%p]\n\n"
                 "FILE NAME: \"%s\"\n"

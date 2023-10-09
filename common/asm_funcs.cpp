@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <strings.h>
+#include <ctype.h>
 
 #include "commands.h"
 #include "types.h"
@@ -98,4 +99,25 @@ CommandErrors RegVerify(RegisterCode reg)
     }
 
     return CommandErrors::OK;
+}
+
+// --------------------------------------------------------
+
+bool SyntaxCheckRemainingString(const char* const source)
+{
+    assert(source);
+
+    const char* src = source;
+
+    while (*src != '\n' && *src != EOF && *src != '\0')
+    {
+        putchar(*src);
+        if (!isspace(*src))
+            return false;
+        src++;
+    }
+
+    putchar(*src);
+
+    return true;
 }

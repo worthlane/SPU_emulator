@@ -10,15 +10,19 @@ static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym);
 static CommandErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte);
 static size_t CountElemLen(elem_t value);
 
-CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
+static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt);
+static inline void PrintBytesInBIN(const void* buf, size_t size,
+                                   size_t amt, FILE* out_stream);
+
+CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info)
 {
     assert(in_stream);
     assert(out_stream);
 
-    char* byte_buf = (char*) calloc(info->text_len + SIGNATURE_LEN, sizeof(char));
-    char* current_byte = byte_buf;
+    int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
+    size_t   position = 0;
 
-    current_byte = AddSignature(current_byte);
+    // current_byte = AddSignature(current_byte);
 
     if (byte_buf == nullptr)
     {
@@ -30,58 +34,59 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
     }
 
     char   command[MAX_COMMAND_LEN] = "";
-    size_t extra_cmd_sym            = 0;
 
     for (size_t line = 0; line < info->line_amt; line++)
     {
-        sscanf(info->lines[line].string,"%s", command);
-        size_t cmd_len = strlen(command);
+        sscanf(info->lines[line].string, "%s", command);
+        size_t cmd_len       = strlen(command);
+        size_t extra_cmd_sym = 0;
 
         if (!strncmp(command, HLT, MAX_COMMAND_LEN))                                // vvvvvvvvvv HLT CMD
         {
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::hlt);
+            byte_buf[position++] = (int64_t) CommandCode::hlt;
             break;
         }                                                                           // ^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, POP, MAX_COMMAND_LEN))                           // vvvvvvvvvv POP COMMAND
         {
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::pop);
+            byte_buf[position++] = (int64_t) CommandCode::pop;
 
             RegisterCode reg_code = GetRegister(info->lines[line].string + cmd_len,
                                                 &extra_cmd_sym);
             if (reg_code == RegisterCode::unk)
                 return CommandErrors::INVALID_REGISTER;
 
-            current_byte += sprintf(current_byte, " %d", (int) reg_code);
+            byte_buf[position++] = (int64_t) reg_code;
         }                                                                           // ^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, OUT, MAX_COMMAND_LEN))                           // vvvvvvvvvvvvv OUT CMD
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::out);    // ^^^^^^^^^^^^^^^^^^^^^
+            byte_buf[position++] = (int64_t) CommandCode::out;                          // ^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))                          // vvvvvvvvvvvvv PUSH COMMAND
         {
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::push);
+            byte_buf[position++] = (int64_t) CommandCode::push;
 
             PushInfo push = {};
 
             CommandErrors err = HandlePushCommand(&push, &extra_cmd_sym,
                                                   info->lines[line].string + cmd_len);
 
-            current_byte += sprintf(current_byte, " %d %ld", push.reg, push.val);
+            byte_buf[position++] = push.reg;
+            byte_buf[position++] = push.val;
         }                                                                           // ^^^^^^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, IN, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::in);     
+            byte_buf[position++] = (int64_t) CommandCode::in;
         else if (!strncmp(command, SUB, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sub);
+            byte_buf[position++] = (int64_t) CommandCode::sub;
         else if (!strncmp(command, ADD, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::add);
+            byte_buf[position++] = (int64_t) CommandCode::add;
         else if (!strncmp(command, MUL, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::mul);
+            byte_buf[position++] = (int64_t) CommandCode::mul;
         else if (!strncmp(command, DIV, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::div);
+            byte_buf[position++] = (int64_t) CommandCode::div;
         else if (!strncmp(command, SQRT, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sqrt);
+            byte_buf[position++] = (int64_t) CommandCode::sqrt;
         else if (!strncmp(command, SIN, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::sin);
+            byte_buf[position++] = (int64_t) CommandCode::sin;
         else if (!strncmp(command, COS, MAX_COMMAND_LEN))
-            current_byte += sprintf(current_byte, "%d", (int) CommandCode::cos);
+            byte_buf[position++] = (int64_t) CommandCode::cos;
         else
         {
             PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
@@ -91,11 +96,14 @@ CommandErrors HandleCommand(FILE* in_stream, FILE* out_stream, Storage* info)
             return CommandErrors::UNKNOWN_WORD;
         }
 
-        current_byte = PrintRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym,
-                                            current_byte);
+        bool syntax_flag = SyntaxCheckRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym);
+
+        if (!syntax_flag)
+            return CommandErrors::SYNTAX_ERROR;
     }
 
-    PrintBuf(out_stream, byte_buf, info->text_len + SIGNATURE_LEN);         // TODO может быть сегфолт
+    PrintBytesInBIN(byte_buf, sizeof(*byte_buf), position, out_bin_stream);
+    PrintBytesInTXT(out_stream, byte_buf, position);
 
     free(byte_buf);
 
@@ -167,5 +175,25 @@ static size_t CountElemLen(elem_t value)
     return cnt;
 }
 
+//------------------------------------------------------------------
 
+static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt)
+{
+    assert(out_stream);
+    assert(byte_buf);
+
+    for (size_t i = 0; i < byte_amt; i++)
+        fprintf(out_stream, "%016llX\n", byte_buf[i]);
+}
+
+//------------------------------------------------------------------
+
+static inline void PrintBytesInBIN(const void* buf, size_t size,
+                                   size_t amt, FILE* out_stream)
+{
+    assert(out_stream);
+    assert(buf);
+
+    fwrite(buf, size, amt, out_stream);
+}
 
