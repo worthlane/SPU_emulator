@@ -4,6 +4,7 @@
 
 #include "commands.h"
 #include "types.h"
+#include "errors.h"
 
 char* PrintRemainingString(const char* const source, char* destination)
 {
@@ -29,22 +30,21 @@ char* PrintRemainingString(const char* const source, char* destination)
 
 //------------------------------------------------------------------
 
-char* AddSignature(char* current_byte)
+void AddSignature(int64_t* byte_buf, size_t* position)
 {
-    assert(current_byte);
+    assert(byte_buf);
 
-    current_byte += sprintf(current_byte, "%llu %d\n", SIGNATURE, ASM_VER);
-
-    return current_byte;
+    byte_buf[(*position)++] = (int64_t) SIGNATURE;
+    byte_buf[(*position)++] = (int64_t) ASM_VER;
 }
 
 //------------------------------------------------------------------
 
-CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver)
+AsmErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver)
 {
     assert(buf);
 
-    CommandErrors error = CommandErrors::OK;
+    AsmErrors error = AsmErrors::NONE;
 
     signature_t sign = 0;
     int         ver  = 0;
@@ -52,10 +52,10 @@ CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const 
     sscanf(buf, "%llu %d", &sign, &ver);
 
     if (sign != expected_sign)
-        return CommandErrors::INCORRECT_SIGNATURE;  // TODO обернуть
+        return AsmErrors::INCORRECT_SIGNATURE;  // TODO обернуть
 
     if (ver != expected_ver)
-        return CommandErrors::INCORRECT_VERSION;
+        return AsmErrors::INCORRECT_VERSION;
 
     return error;
 }
@@ -80,7 +80,7 @@ RegisterCode TranslateRegisterToByte(const char* reg)
 
 //------------------------------------------------------------------
 
-CommandErrors RegVerify(RegisterCode reg)
+AsmErrors VerifyRegister(RegisterCode reg)
 {
     switch (reg)
     {
@@ -95,15 +95,15 @@ CommandErrors RegVerify(RegisterCode reg)
         case (RegisterCode::unk):
             // fall through
         default:
-            return CommandErrors::INVALID_REGISTER;
+            return AsmErrors::INVALID_REGISTER;
     }
 
-    return CommandErrors::OK;
+    return AsmErrors::NONE;
 }
 
 // --------------------------------------------------------
 
-bool SyntaxCheckRemainingString(const char* const source)
+AsmErrors SyntaxCheckRemainingString(const char* const source)
 {
     assert(source);
 
@@ -111,13 +111,112 @@ bool SyntaxCheckRemainingString(const char* const source)
 
     while (*src != '\n' && *src != EOF && *src != '\0')
     {
-        putchar(*src);
         if (!isspace(*src))
-            return false;
+            return AsmErrors::SYNTAX_ERROR;
         src++;
     }
 
-    putchar(*src);
+    return AsmErrors::NONE;
+}
 
-    return true;
+// --------------------------------------------------------
+
+int DumpAsmError(FILE* fp, const void* err, const char* func, const char* file, const int line)
+{
+    AsmErrors error = *((AsmErrors*) err);
+
+    LOG_START_MOD(func, file, line);
+
+    switch (error)
+    {
+        case (AsmErrors::NONE):
+            break;
+
+        case (AsmErrors::ALLOCATE_MEM):
+            fprintf(fp, "\nERROR: FAILED TO ALLOCATE MEMORY\n\n");
+            break;
+
+        case (AsmErrors::SYNTAX_ERROR):
+            fprintf(fp, "\nERROR: SYNTAX ERROR IN\n\n");
+            break;
+
+        case (AsmErrors::UNKNOWN_CODE):
+            fprintf(fp, "\nERROR: UNKNOWN COMMAND CODE\n\n");
+            break;
+
+        case (AsmErrors::UNKNOWN_WORD):
+            fprintf(fp, "\nERROR: UNKNOWN COMMAND WORD\n\n");
+            break;
+
+        case (AsmErrors::INCORRECT_SIGNATURE):
+            fprintf(fp, "\nERROR: INCORRECT SIGNATURE\n\n");
+            break;
+
+        case (AsmErrors::INCORRECT_VERSION):
+            fprintf(fp, "\nERROR: INCORRECT VERSION\n\n");
+            break;
+
+        case (AsmErrors::INVALID_REGISTER):
+            fprintf(fp, "\nERROR: INVALID REGISTER\n\n");
+            break;
+
+        case (AsmErrors::READ_BYTE_CODE):
+            fprintf(fp, "\nERROR: CAN NOT READ BYTE CODE FILE\n\n");
+            break;
+
+        default:
+            fprintf(fp, "\nERROR: UNKNOWN ASM ERROR\n\n");
+            break;
+    }
+
+    LOG_END();
+
+    return (int) error;
+}
+
+//-------------------------------------------------------------------------------------------
+
+FILE* OpenByteCodeFile(const char* input_file, ErrorInfo* error)
+{
+    FILE* in_stream  = fopen(input_file, "rb");
+
+    if (in_stream == nullptr)
+    {
+        error->code = ERRORS::OPEN_FILE;
+        error->data = (void*) input_file;
+        return in_stream;
+    }
+
+    return in_stream;
+}
+
+//-------------------------------------------------------------------------------------------
+
+AsmErrors TranslateByteToRegister(const RegisterCode reg, char* register_name)
+{
+    assert(register_name);
+
+    switch (reg)
+    {
+        case (RegisterCode::rax):
+            strncpy(register_name, RAX, MAX_REG_LEN);
+            break;
+
+        case (RegisterCode::rbx):
+            strncpy(register_name, RBX, MAX_REG_LEN);
+            break;
+
+        case (RegisterCode::rcx):
+            strncpy(register_name, RCX, MAX_REG_LEN);
+            break;
+
+        case (RegisterCode::rdx):
+            strncpy(register_name, RDX, MAX_REG_LEN);
+            break;
+
+        default:
+            return AsmErrors::INVALID_REGISTER;
+    }
+
+    return AsmErrors::NONE;
 }

@@ -45,8 +45,8 @@ int main(const int argc, const char* argv[])
     FILE* out_bin_stream = OpenBinOutputFile(output_bin_file, &error);
     EXIT_IF_ERROR(&error);
 
-    CommandErrors asm_err = Assembly(in_stream, out_stream, out_bin_stream, &info);
-    if (asm_err != CommandErrors::OK)
+    AsmErrors asm_err = Assembly(in_stream, out_stream, out_bin_stream, &info);
+    if (asm_err != AsmErrors::NONE)
     {
         error.code = ERRORS::ASM_ERROR;
         EXIT_IF_ERROR(&error);

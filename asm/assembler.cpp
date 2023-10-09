@@ -7,31 +7,29 @@
 #include "../common/log_funcs.h"
 
 static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym);
-static CommandErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte);
+static AsmErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte);
 static size_t CountElemLen(elem_t value);
 
 static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt);
 static inline void PrintBytesInBIN(const void* buf, size_t size,
                                    size_t amt, FILE* out_stream);
 
-CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info)
+AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info)
 {
     assert(in_stream);
     assert(out_stream);
 
+    AsmErrors error = AsmErrors::NONE;
+
     int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
     size_t   position = 0;
 
-    // current_byte = AddSignature(current_byte);
-
     if (byte_buf == nullptr)
-    {
-        PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
-                 "ERROR: FAILED TO ALLOCATE MEMORY\n"
-                 "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"); // TODO обернуть нормально потом
+        error = AsmErrors::ALLOCATE_MEM;
 
-        return CommandErrors::ALLOCATE_MEM;
-    }
+    RETURN_IF_ASMERROR(error);
+
+    AddSignature(byte_buf, &position);
 
     char   command[MAX_COMMAND_LEN] = "";
 
@@ -53,20 +51,22 @@ CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, 
             RegisterCode reg_code = GetRegister(info->lines[line].string + cmd_len,
                                                 &extra_cmd_sym);
             if (reg_code == RegisterCode::unk)
-                return CommandErrors::INVALID_REGISTER;
+                error    =  AsmErrors::INVALID_REGISTER;
+            RETURN_IF_ASMERROR(error);
 
             byte_buf[position++] = (int64_t) reg_code;
         }                                                                           // ^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, OUT, MAX_COMMAND_LEN))                           // vvvvvvvvvvvvv OUT CMD
-            byte_buf[position++] = (int64_t) CommandCode::out;                          // ^^^^^^^^^^^^^^^^^^^^^
+            byte_buf[position++] = (int64_t) CommandCode::out;                      // ^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))                          // vvvvvvvvvvvvv PUSH COMMAND
         {
             byte_buf[position++] = (int64_t) CommandCode::push;
 
             PushInfo push = {};
 
-            CommandErrors err = HandlePushCommand(&push, &extra_cmd_sym,
-                                                  info->lines[line].string + cmd_len);
+            error = HandlePushCommand(&push, &extra_cmd_sym,
+                                      info->lines[line].string + cmd_len);
+            RETURN_IF_ASMERROR(error);
 
             byte_buf[position++] = push.reg;
             byte_buf[position++] = push.val;
@@ -89,17 +89,12 @@ CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, 
             byte_buf[position++] = (int64_t) CommandCode::cos;
         else
         {
-            PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
-                     "ERROR: UNKNOWN WORD \"%s\"\n"
-                     "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n", command); // TODO обернуть нормально потом
-
-            return CommandErrors::UNKNOWN_WORD;
+            error = AsmErrors::UNKNOWN_WORD;
         }
+        RETURN_IF_ASMERROR(error);
 
-        bool syntax_flag = SyntaxCheckRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym);
-
-        if (!syntax_flag)
-            return CommandErrors::SYNTAX_ERROR;
+        error = SyntaxCheckRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym);
+        RETURN_IF_ASMERROR(error);
     }
 
     PrintBytesInBIN(byte_buf, sizeof(*byte_buf), position, out_bin_stream);
@@ -107,7 +102,7 @@ CommandErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, 
 
     free(byte_buf);
 
-    return CommandErrors::OK;
+    return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------
@@ -130,7 +125,7 @@ static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym)
 
 //------------------------------------------------------------------
 
-static CommandErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte)
+static AsmErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte)
 {
     elem_t value = 0;
     int read     = sscanf(input_byte, "%ld", &value);
@@ -139,7 +134,7 @@ static CommandErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, ch
     {
         RegisterCode reg_code = GetRegister(input_byte, extra_cmd_sym);
         if (reg_code == RegisterCode::unk)
-            return CommandErrors::INVALID_REGISTER;
+            return AsmErrors::INVALID_REGISTER;
 
         push->reg = true;
         push->val = (int) reg_code;
@@ -153,7 +148,7 @@ static CommandErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, ch
         *extra_cmd_sym = 1 + CountElemLen(push->val);
     }
 
-    return CommandErrors::OK;
+    return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------

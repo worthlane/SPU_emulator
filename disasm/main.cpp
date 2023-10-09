@@ -6,7 +6,7 @@
 #include "../common/errors.h"
 
 static const char* DEFAULT_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";
-static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
+static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin";
 
 int main(const int argc, const char* argv[])
 {
@@ -29,14 +29,14 @@ int main(const int argc, const char* argv[])
 
     Storage info = {};
 
-    FILE* in_stream  = OpenInputFile(input_file, &info, &error);
+    FILE* in_stream  = OpenByteCodeFile(input_file, &error);
     EXIT_IF_ERROR(&error);
 
     FILE* out_stream = OpenOutputFile(output_file, &error);
     EXIT_IF_ERROR(&error);
 
-    CommandErrors asm_err = HandleCode(in_stream, out_stream, &info);
-    if (asm_err != CommandErrors::OK)
+    AsmErrors asm_err = DisAssembly(in_stream, out_stream);
+    if (asm_err != AsmErrors::NONE)
     {
         error.code = ERRORS::DISASM_ERROR;
         EXIT_IF_ERROR(&error);

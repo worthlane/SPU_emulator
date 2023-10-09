@@ -87,8 +87,8 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 SPUErrors RunSPU(spu_t* spu)
 {
-    CommandErrors cmd_err = VerifySignature(spu->curr_input_byte, SIGNATURE, SPU_VER);
-    if (cmd_err != CommandErrors::OK)
+    AsmErrors cmd_err = VerifySignature(spu->curr_input_byte, SIGNATURE, SPU_VER);
+    if (cmd_err != AsmErrors::NONE)
         return (spu->status = SPUErrors::WRONG_SIGNATURE);
 
     spu->curr_input_byte += SIGNATURE_LEN;
@@ -341,8 +341,8 @@ static SPUErrors CommandPop(spu_t* spu)
 
     RegisterCode reg = (RegisterCode) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
 
-    CommandErrors reg_err = RegVerify(reg);
-    if (reg_err != CommandErrors::OK)
+    AsmErrors reg_err = VerifyRegister(reg);
+    if (reg_err != AsmErrors::NONE)
         return (SPUErrors::UNKNOWN_REGISTER);
 
     elem_t val1 = POISON;
@@ -373,8 +373,8 @@ static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push)
 
     if (push->reg == 1)
     {
-        CommandErrors reg_err = RegVerify((RegisterCode) push->val);
-        if (reg_err != CommandErrors::OK)
+        AsmErrors reg_err = VerifyRegister((RegisterCode) push->val);
+        if (reg_err != AsmErrors::NONE)
             return (SPUErrors::UNKNOWN_REGISTER);
 
         if (spu->registers[push->val] == POISON)

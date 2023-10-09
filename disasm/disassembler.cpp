@@ -7,45 +7,48 @@
 
 static void ClearInput(FILE* fp);
 
-CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
+AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 {
     assert(in_stream);
     assert(out_stream);
 
-    CommandErrors error = VerifySignature(info->buf, SIGNATURE, ASM_VER);
-    if (error != CommandErrors::OK)
-        return error;
+    AsmErrors error = AsmErrors::NONE;
 
-    char command[10] = "";
-    CommandCode command_code = CommandCode::hlt;
+    /*AsmErrors error = VerifySignature(info->buf, SIGNATURE, ASM_VER);
+    if (error != AsmErrors::NONE)
+        return error;*/
 
-    char* asm_buf = (char*) calloc(info->text_len, sizeof(char));
+    int64_t  byte_buf[MAX_BYTE_CODE_LEN] = {};
+    size_t   size     = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, in_stream);
+    size_t   position = 0;
+    if (byte_buf == nullptr)
+        error = AsmErrors::READ_BYTE_CODE;
+
+    position += 2; // TODO space for signature verify
+
+    RETURN_IF_ASMERROR(error);
+
+    char* asm_buf      = (char*) calloc(MAX_ASM_CODE_LEN, sizeof(char));
     char* current_byte = asm_buf;
-
     if (asm_buf == nullptr)
+        error = AsmErrors::ALLOCATE_MEM;
+
+    RETURN_IF_ASMERROR(error);
+
+    CommandCode cmd_code = CommandCode::hlt;
+
+    while(true)
     {
-        PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
-                 "ERROR: FAILED TO ALLOCATE MEMORY\n"
-                 "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"); // TODO обернуть нормально потом
-
-        return CommandErrors::ALLOCATE_MEM;
-    }
-
-    for (size_t line = 1; line < info->line_amt; line++)
-    {
-        sscanf(info->lines[line].string, "%s", command);
-        size_t code_len = strlen(command);
-
-        long command_id = strtol(command, nullptr, 10);
-
-        command_code = (CommandCode) command_id;
+        cmd_code = (CommandCode) byte_buf[position++];
 
         bool  quit_cycle_flag = false;
 
-        switch (command_code)
+        switch (cmd_code)
         {
             case (CommandCode::push):
                 current_byte += sprintf(current_byte, "%s", PUSH);
+
+                position += 2;
                 break;
             case (CommandCode::in):
                 current_byte += sprintf(current_byte, "%s", IN);
@@ -74,6 +77,19 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
             case (CommandCode::cos):
                 current_byte += sprintf(current_byte, "%s", OUT);
                 break;
+            case (CommandCode::pop):
+            {
+                current_byte += sprintf(current_byte, "%s", POP);
+
+                RegisterCode reg = (RegisterCode) byte_buf[position++];
+                char register_name[MAX_REG_LEN] = "";
+
+                error = TranslateByteToRegister(reg, register_name);
+                RETURN_IF_ASMERROR(error);
+
+                current_byte += sprintf(current_byte, " %s", register_name);
+                break;
+            }
             case (CommandCode::hlt):
                 current_byte += sprintf(current_byte, "%s", HLT);
                 quit_cycle_flag = true;
@@ -81,25 +97,21 @@ CommandErrors HandleCode(FILE* in_stream, FILE* out_stream, Storage* info)
             case (CommandCode::unk):
                 // fall through
             default:
-                PrintLog("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n"
-                         "ERROR: UNKNOWN CODE \"%d\"\n"
-                         "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n", command_code); // TODO обернуть нормально потом
-
-            return CommandErrors::UNKNOWN_WORD;
+                error = AsmErrors::UNKNOWN_WORD;
         }
+        RETURN_IF_ASMERROR(error);
+
+        current_byte += sprintf(current_byte, "\n");
 
         if (quit_cycle_flag)
             break;
-
-        current_byte = PrintRemainingString(info->lines[line].string + code_len,
-                                            current_byte);
     }
 
-    PrintBuf(out_stream, asm_buf, info->text_len);
+    PrintBuf(out_stream, asm_buf, current_byte - asm_buf);
 
     free(asm_buf);
 
-    return CommandErrors::OK;
+    return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------

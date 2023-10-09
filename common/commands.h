@@ -5,6 +5,7 @@
 
 #include "types.h"
 #include "input_and_output.h"
+#include "log_funcs.h"
 
 enum class CommandCode
 {
@@ -28,13 +29,30 @@ enum class CommandCode
     unk
 };
 
-static const size_t MAX_BYTE_CODE_LEN = 1000;
+#ifdef RETURN_IF_ASMERROR
+#undef RETURN_IF_ASMERROR
 
-enum class CommandErrors
+#endif
+#define RETURN_IF_ASMERROR(error)           do                                                          \
+                                            {                                                           \
+                                                if ((error) != AsmErrors::NONE)                         \
+                                                {                                                       \
+                                                    LogDump(DumpAsmError, &error,                       \
+                                                            __func__, __FILE__, __LINE__);              \
+                                                    return error;                                       \
+                                                }                                                       \
+                                            } while(0)
+
+static const size_t MAX_BYTE_CODE_LEN = 1000;
+static const size_t MAX_ASM_CODE_LEN  = 10000;
+
+enum class AsmErrors
 {
-    OK = 0,
+    NONE = 0,
 
     ALLOCATE_MEM,
+
+    READ_BYTE_CODE,
 
     SYNTAX_ERROR,
     UNKNOWN_CODE,
@@ -105,11 +123,17 @@ static const char* COS  = "cos";
 //---------------------------------------
 
 char* PrintRemainingString(const char* const source, char* dest);
-bool SyntaxCheckRemainingString(const char* const source);
+AsmErrors SyntaxCheckRemainingString(const char* const source);
 
-char* AddSignature(char* current_byte);
-CommandErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
+void AddSignature(int64_t* byte_buf, size_t* position);
+AsmErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
+
 RegisterCode TranslateRegisterToByte(const char* reg);
-CommandErrors RegVerify(RegisterCode reg);
+AsmErrors TranslateByteToRegister(const RegisterCode reg, char* register_name);
+AsmErrors VerifyRegister(RegisterCode reg);
+
+int DumpAsmError(FILE* fp, const void* err, const char* func, const char* file, const int line);
+
+FILE* OpenByteCodeFile(const char* input_file, ErrorInfo* error);
 
 #endif
