@@ -14,6 +14,9 @@ static void PrintRegisters(FILE* fp, const spu_t* spu);
 
 static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push);
 
+static int64_t* ByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error);
+static inline void ByteBufferDtor(int64_t* byte_buf);
+
 // =========== COMMANDS =========
 
 static SPUErrors CommandOutput(spu_t* spu);
@@ -39,6 +42,8 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
 {
     char* buffer = nullptr;
 
+    // ============================= OPEN FILE
+
     FILE* fp = fopen(file_name, "rb");
 
     if (fp == NULL)
@@ -47,16 +52,16 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
         return (error->code = ERRORS::OPEN_FILE);
     }
 
-    off_t buf_size  = GetFileLength(file_name);
-
-    AllocateBuf(fp, &buffer, buf_size, error);
-    RETURN_IF_ERROR(error->code);
+    // ======================================
 
     error->code = (ERRORS) StackCtor(&(spu->stack));
     RETURN_IF_ERROR(error->code);
 
-    spu->input_buf       = buffer;
-    spu->curr_input_byte = buffer;
+    int64_t* byte_buf = ByteBufferCtor(fp, file_name, error);
+    RETURN_IF_ERROR(error->code);
+
+    spu->byte_buf        = byte_buf;
+    spu->position        = 0;
     spu->file_name       = file_name;
     spu->fp              = fp;
     spu->status          = SPUErrors::NONE;
@@ -71,13 +76,16 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
     error->code = (ERRORS) StackDtor(&(spu->stack));
     RETURN_IF_ERROR(error->code);
 
+    memset(spu->registers, 0, sizeof(register_t) * REG_AMT);
+
     if (spu->fp != stdin)
         fclose(spu->fp);
 
-    spu->file_name       = "";
+    ByteBufferDtor(spu->byte_buf);
+
+    spu->file_name       = nullptr;
     spu->fp              = nullptr;
-    spu->curr_input_byte = nullptr;
-    spu->input_buf       = nullptr;
+    spu->position        = 0;
     spu->status          = SPUErrors::DESTRUCTED;
 
     return error->code;
@@ -87,19 +95,15 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 SPUErrors RunSPU(spu_t* spu)
 {
-    AsmErrors cmd_err = VerifySignature(spu->curr_input_byte, SIGNATURE, SPU_VER);
+    AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER);
     if (cmd_err != AsmErrors::NONE)
         return (spu->status = SPUErrors::WRONG_SIGNATURE);
 
-    spu->curr_input_byte += SIGNATURE_LEN;
-
-    char command[MAX_COMMAND_LEN] = "";
-    CommandCode      command_code = CommandCode::hlt;
+    CommandCode command_code = CommandCode::hlt;
 
     while (true)
     {
-        long command_id = strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
-        command_code    = (CommandCode) command_id;
+        command_code    = (CommandCode) spu->byte_buf[spu->position++];
 
         bool  quit_cycle_flag = false;
         switch (command_code)
@@ -156,8 +160,8 @@ static SPUErrors CommandPush(spu_t* spu)
 {
     PushInfo push = {};
 
-    push.reg = (unsigned int) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
-    push.val = (elem_t) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
+    push.reg = (unsigned int) spu->byte_buf[spu->position++];
+    push.val = (elem_t)       spu->byte_buf[spu->position++];
 
     elem_t val = POISON;
 
@@ -339,7 +343,7 @@ static SPUErrors CommandPop(spu_t* spu)
 {
     ERRORS error = ERRORS::NONE;
 
-    RegisterCode reg = (RegisterCode) strtol(spu->curr_input_byte, &(spu->curr_input_byte), 10);
+    RegisterCode reg = (RegisterCode) spu->byte_buf[spu->position++];
 
     AsmErrors reg_err = VerifyRegister(reg);
     if (reg_err != AsmErrors::NONE)
@@ -412,11 +416,11 @@ SPUErrors SPUVerify(spu_t* spu, const char* func, const char* file, const int li
     if (spu->fp == nullptr)
         spu->status = SPUErrors::NO_FILE_POINTER;
 
-    if (spu->input_buf == nullptr)
-        spu->status = SPUErrors::NO_INPUT_BUFFER;
+    if (spu->byte_buf == nullptr)
+        spu->status = SPUErrors::NO_BYTE_BUFFER;
 
-    if (spu->curr_input_byte < spu->input_buf)
-        spu->status = SPUErrors::INVALID_BYTE_POINTER;
+    if (spu->position >= MAX_BYTE_CODE_LEN)
+        spu->status = SPUErrors::INVALID_BYTE_POSITION;
 
     if (spu->registers == nullptr)
         spu->status = SPUErrors::NO_REGISTERS_ARRAY;
@@ -440,14 +444,14 @@ int SPUDump(FILE* fp, const void* spu_ptr, const char* func, const char* file, c
     STACK_DUMP(&(spu->stack));
 
     fprintf(fp, "SOFTWARE PROCESSING UNIT [%p]\n\n"
-                "FILE NAME: \"%s\"\n"
+                "FILE NAME:    \"%s\"\n"
                 "FILE POINTER: [%p]\n"
-                "INPUT BUFFER: [%zu]\n"
-                "CURRENT BYTE: [%zu]\n"
+                "BYTE BUFFER:  [%zu]\n"
+                "POSITION:     [%d]\n"
                 "STATUS:        %d\n"
                 "::::::::::::::::::::\n"
                 "REGISTERS:\n\n",
-                spu, spu->file_name, spu->fp, spu->input_buf, spu->curr_input_byte, spu->status);
+                spu, spu->file_name, spu->fp, spu->byte_buf, spu->position, spu->status);
 
     PrintRegisters(fp, spu);
 
@@ -471,4 +475,42 @@ static void PrintRegisters(FILE* fp, const spu_t* spu)
                 RBX, spu->registers[rbx],
                 RCX, spu->registers[rcx],
                 RDX, spu->registers[rdx]);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static int64_t* ByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error)
+{
+    assert(fp);
+    assert(file_name);
+    assert(error);
+
+    int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
+
+    if (byte_buf == nullptr)
+    {
+        error->code = ERRORS::ALLOCATE_MEMORY;
+        return nullptr;
+    }
+
+    size_t read = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, fp);
+
+    if (read == 0)
+    {
+        error->data = (char*) file_name;
+        error->code = ERRORS::READ_FILE;
+
+        return nullptr;
+    }
+
+    return byte_buf;
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static inline void ByteBufferDtor(int64_t* byte_buf)
+{
+    assert(byte_buf);
+
+    free(byte_buf);
 }

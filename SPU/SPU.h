@@ -23,8 +23,8 @@ enum class SPUErrors
     INVALID_STACK,
     NO_FILE_NAME,
     NO_FILE_POINTER,
-    NO_INPUT_BUFFER,
-    INVALID_BYTE_POINTER,
+    NO_BYTE_BUFFER,
+    INVALID_BYTE_POSITION,
     NO_REGISTERS_ARRAY,
 
     UNKNOWN_COMMAND,
@@ -38,8 +38,8 @@ struct SPUInfo
 
     const char* file_name;
     FILE*       fp;
-    char*       input_buf;
-    char*       curr_input_byte;
+    int64_t*    byte_buf;
+    size_t      position;
 
     elem_t      registers[REG_AMT];
 
@@ -62,7 +62,7 @@ typedef struct SPUInfo spu_t;
                                                 }                                                       \
                                             } while(0)
 
-static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
+static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin";
 
 ERRORS SPUCtor(ErrorInfo* error, spu_t* spu_info, const char* file_name = DEFAULT_IN);
 ERRORS SPUDtor(ErrorInfo* error, spu_t* spu_info);
