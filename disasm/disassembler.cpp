@@ -1,11 +1,14 @@
 #include <strings.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
 
 #include "disassembler.h"
 #include "../common/log_funcs.h"
 
 static void ClearInput(FILE* fp);
+static AsmErrors ReadPushTarget(const int64_t* byte_buf, size_t* position, char* val);
 
 AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 {
@@ -14,25 +17,24 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 
     AsmErrors error = AsmErrors::NONE;
 
-    /*AsmErrors error = VerifySignature(info->buf, SIGNATURE, ASM_VER);
-    if (error != AsmErrors::NONE)
-        return error;*/
-
-    int64_t  byte_buf[MAX_BYTE_CODE_LEN] = {};
-    size_t   size     = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, in_stream);
-    size_t   position = 0;
-    if (byte_buf == nullptr)
+    // =============================== BYTE BUFFER INIT
+    int64_t byte_buf[MAX_BYTE_CODE_LEN] = {};
+    size_t  size     = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, in_stream);
+    size_t  position = 0;
+    if (size == 0)
         error = AsmErrors::READ_BYTE_CODE;
-
-    position += 2; // TODO space for signature verify
-
     RETURN_IF_ASMERROR(error);
+    // =====================================================
 
+    // ================================= ASM BUFFER INIT
     char* asm_buf      = (char*) calloc(MAX_ASM_CODE_LEN, sizeof(char));
     char* current_byte = asm_buf;
     if (asm_buf == nullptr)
         error = AsmErrors::ALLOCATE_MEM;
+    RETURN_IF_ASMERROR(error);
+    // =================================================
 
+    error = VerifySignature(byte_buf, &position, SIGNATURE, ASM_VER);
     RETURN_IF_ASMERROR(error);
 
     CommandCode cmd_code = CommandCode::hlt;
@@ -40,16 +42,21 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     while(true)
     {
         cmd_code = (CommandCode) byte_buf[position++];
-
         bool  quit_cycle_flag = false;
 
         switch (cmd_code)
         {
             case (CommandCode::push):
+            {
                 current_byte += sprintf(current_byte, "%s", PUSH);
 
-                position += 2;
+                char val[MAX_WORD_LEN] = "";
+                error = ReadPushTarget(byte_buf, &position, val);
+                RETURN_IF_ASMERROR(error);
+
+                current_byte += sprintf(current_byte, " %s", val);
                 break;
+            }
             case (CommandCode::in):
                 current_byte += sprintf(current_byte, "%s", IN);
                 break;
@@ -120,4 +127,34 @@ static void ClearInput(FILE* fp)
 {
     int ch = 0;
     while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors ReadPushTarget(const int64_t* byte_buf, size_t* position, char* val)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(val);
+
+    AsmErrors error = AsmErrors::NONE;
+
+    PushInfo push = {};
+    push.reg = byte_buf[(*position)++];
+    push.val = byte_buf[(*position)++];
+
+    if (push.reg == false)
+    {
+        int printed = sprintf(val, "%lld", push.val);
+        if (printed == 0)
+            return AsmErrors::PRINT_VALUE;
+    }
+    else
+    {
+        error = TranslateByteToRegister((RegisterCode) push.val, val);
+        if (error != AsmErrors::NONE)
+            return error;
+    }
+
+    return error;
 }

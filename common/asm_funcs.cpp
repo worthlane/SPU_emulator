@@ -40,24 +40,22 @@ void AddSignature(int64_t* byte_buf, size_t* position)
 
 //------------------------------------------------------------------
 
-AsmErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver)
+AsmErrors VerifySignature(int64_t* byte_buf, size_t* position,
+                          const signature_t expected_sign, const int expected_ver)
 {
-    assert(buf);
+    assert(byte_buf);
+    assert(position);
 
-    AsmErrors error = AsmErrors::NONE;
-
-    signature_t sign = 0;
-    int         ver  = 0;
-
-    sscanf(buf, "%llu %d", &sign, &ver);
+    signature_t sign = byte_buf[(*position)++];
+    int         ver  = byte_buf[(*position)++];
 
     if (sign != expected_sign)
-        return AsmErrors::INCORRECT_SIGNATURE;  // TODO обернуть
+        return AsmErrors::INCORRECT_SIGNATURE;
 
     if (ver != expected_ver)
         return AsmErrors::INCORRECT_VERSION;
 
-    return error;
+    return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------
@@ -162,6 +160,10 @@ int DumpAsmError(FILE* fp, const void* err, const char* func, const char* file, 
 
         case (AsmErrors::READ_BYTE_CODE):
             fprintf(fp, "\nERROR: CAN NOT READ BYTE CODE FILE\n\n");
+            break;
+
+        case (AsmErrors::PRINT_VALUE):
+            fprintf(fp, "\nERROR: CAN NOT PRINT VALUE\n\n");
             break;
 
         default:

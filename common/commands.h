@@ -53,6 +53,7 @@ enum class AsmErrors
     ALLOCATE_MEM,
 
     READ_BYTE_CODE,
+    PRINT_VALUE,
 
     SYNTAX_ERROR,
     UNKNOWN_CODE,
@@ -88,8 +89,9 @@ enum RegisterCode
     rdx
 };
 
-static const size_t REG_AMT     = 4;
-static const size_t MAX_REG_LEN = 5;
+static const size_t REG_AMT      = 4;
+static const size_t MAX_REG_LEN  = 5;
+static const size_t MAX_WORD_LEN = 64;
 
 //======================================
 
@@ -126,7 +128,8 @@ char* PrintRemainingString(const char* const source, char* dest);
 AsmErrors SyntaxCheckRemainingString(const char* const source);
 
 void AddSignature(int64_t* byte_buf, size_t* position);
-AsmErrors VerifySignature(char* buf, const signature_t expected_sign, const int expected_ver);
+AsmErrors VerifySignature(int64_t* byte_buf, size_t* position,
+                          const signature_t expected_sign, const int expected_ver);
 
 RegisterCode TranslateRegisterToByte(const char* reg);
 AsmErrors TranslateByteToRegister(const RegisterCode reg, char* register_name);
