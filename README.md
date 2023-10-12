@@ -22,6 +22,7 @@ Contains in "disasm" folder. Translates byte code to assembler code. Reads infor
 9) cos - the cosinus of the last stack element
 10) sin - the sinus of the last stack element
 11) in - push value in stack from keyboard input
+12) hlt - to stop processor
 
 ## Registers
 SPU has 4 registers:
