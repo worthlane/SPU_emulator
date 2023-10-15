@@ -1,10 +1,5 @@
-push 300
-push 400
-out
-pop rcx
-push rcx
-push rcx
-push rcx
+push 5
+push 3
 mul
 out
 hlt

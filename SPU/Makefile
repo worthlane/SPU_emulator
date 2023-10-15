@@ -16,7 +16,7 @@ CXXFLAGS =  -D _DEBUG -ggdb3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-
 BUILD_DIR = ../build/bin
 OBJECTS_DIR = ../build/spu
 COMMON_DIR = ../common
-SOURCES = main.cpp stack.cpp SPU.cpp
+SOURCES = main.cpp stack.cpp SPU.cpp input.cpp
 OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp ../common/hash.cpp \
 			  ../common/input_and_output.cpp ../common/asm_funcs.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)

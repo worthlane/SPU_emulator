@@ -73,6 +73,8 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
         }                                                                           // ^^^^^^^^^^^^^^^^^^^^^^^^^^
         else if (!strncmp(command, IN, MAX_COMMAND_LEN))
             byte_buf[position++] = (int64_t) CommandCode::in;
+        else if (!strncmp(command, SPEAK, MAX_COMMAND_LEN))
+            byte_buf[position++] = (int64_t) CommandCode::speak;
         else if (!strncmp(command, SUB, MAX_COMMAND_LEN))
             byte_buf[position++] = (int64_t) CommandCode::sub;
         else if (!strncmp(command, ADD, MAX_COMMAND_LEN))

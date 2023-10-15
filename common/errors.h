@@ -31,11 +31,11 @@
                                                 }                                                       \
                                             } while(0)
 
-#ifdef RETURN_CONVERTED_ERROR
-#undef RETURN_CONVERTED_ERROR
+#ifdef RETURN_IF_NOT_EQUAL
+#undef RETURN_IF_NOT_EQUAL
 
 #endif
-#define RETURN_CONVERTED_ERROR(check_err, expected_err, return_err)                         \
+#define RETURN_IF_NOT_EQUAL(check_err, expected_err, return_err)                            \
                                                                                             \
                             do                                                              \
                             {                                                               \
@@ -70,6 +70,8 @@ enum class ERRORS
     DISASM_ERROR,
 
     SPU_ERROR,
+
+    USER_QUIT,
 
     /// unknown error
     UNKNOWN

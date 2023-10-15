@@ -64,6 +64,11 @@ int PrintError(FILE* fp, const void* err, const char* func, const char* file, co
             LOG_END();
             return (int) error->code;
 
+        case (ERRORS::USER_QUIT):
+            fprintf(fp, "USER DECIDED TO QUIT\n");
+            LOG_END();
+            return (int) error->code;
+
         case (ERRORS::UNKNOWN):
         // fall through
         default:

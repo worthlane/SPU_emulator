@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "SPU.h"
+#include "input.h"
 #include "../common/errors.h"
 #include "../common/commands.h"
 #include "../common/input_and_output.h"
@@ -12,29 +13,40 @@ static const int MAX_FILE_LEN = 100;
 
 static void PrintRegisters(FILE* fp, const spu_t* spu);
 
-static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push);
+static SPUErrors HandlePushInfo(spu_t* spu, elem_t* val, PushInfo* push);
 
-static int64_t* ByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error);
-static inline void ByteBufferDtor(int64_t* byte_buf);
+static int64_t*    SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error);
+static inline void SPUByteBufferDtor(spu_t* spu);
 
 // =========== COMMANDS =========
 
 static SPUErrors CommandOutput(spu_t* spu);
 
 static SPUErrors CommandPush(spu_t* spu);
+static SPUErrors CommandIn(spu_t* spu);
 static SPUErrors CommandPop(spu_t* spu);
 
-static SPUErrors CommandSubstract(spu_t* spu);
-static SPUErrors CommandAdd(spu_t* spu);
-static SPUErrors CommandMultiply(spu_t* spu);
-static SPUErrors CommandDivide(spu_t* spu);
-static SPUErrors CommandSqrt(spu_t* spu);
-static SPUErrors CommandCos(spu_t* spu);
-static SPUErrors CommandSin(spu_t* spu);
+static void CommandSpeak();
+
+static SPUErrors CommandTwoElemArithm(spu_t* spu, CommandCode operation);
+static SPUErrors CommandOneElemArithm(spu_t* spu, CommandCode operation);
 
 // ==============================
 
-static void ClearInput(FILE* fp);
+// ========= ARITHMETICS =======
+
+static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2 = POISON);
+// для val мб лучше сделать storage чтобы alu работал красиво и для одного элемента
+
+static inline elem_t Substract(elem_t val1, elem_t val2);
+static inline elem_t Add(elem_t val1, elem_t val2);
+static inline elem_t Multiply(elem_t val1, elem_t val2);
+static inline elem_t Divide(elem_t val1, elem_t val2);
+static inline elem_t Sqrt(elem_t val);
+static inline elem_t Cos(elem_t val);
+static inline elem_t Sin(elem_t val);
+
+// =============================
 
 //-------------------------------------------------------------
 
@@ -57,7 +69,7 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
     error->code = (ERRORS) StackCtor(&(spu->stack));
     RETURN_IF_ERROR(error->code);
 
-    int64_t* byte_buf = ByteBufferCtor(fp, file_name, error);
+    int64_t* byte_buf = SPUByteBufferCtor(fp, file_name, error);
     RETURN_IF_ERROR(error->code);
 
     spu->byte_buf        = byte_buf;
@@ -81,7 +93,7 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
     if (spu->fp != stdin)
         fclose(spu->fp);
 
-    ByteBufferDtor(spu->byte_buf);
+    SPUByteBufferDtor(spu);
 
     spu->file_name       = nullptr;
     spu->fp              = nullptr;
@@ -108,35 +120,33 @@ SPUErrors RunSPU(spu_t* spu)
         bool  quit_cycle_flag = false;
         switch (command_code)
         {
+            case (CommandCode::speak):
+                CommandSpeak();
+                break;
             case (CommandCode::push):
                 spu->status = CommandPush(spu);
                 break;
             case (CommandCode::in):
-                printf("in\n");
+                spu->status = CommandIn(spu);
                 break;
             case (CommandCode::out):
                 spu->status = CommandOutput(spu);
                 break;
             case (CommandCode::sub):
-                spu->status = CommandSubstract(spu);
-                break;
+                // fall through
             case (CommandCode::add):
-                spu->status = CommandAdd(spu);
-                break;
+                // fall through
             case (CommandCode::mul):
-                spu->status = CommandMultiply(spu);
-                break;
+                // fall through
             case (CommandCode::div):
-                spu->status = CommandDivide(spu);
+                spu->status = CommandTwoElemArithm(spu, command_code);
                 break;
             case (CommandCode::sqrt):
-                spu->status = CommandSqrt(spu);
-                break;
+                // fall through
             case (CommandCode::sin):
-                spu->status = CommandSin(spu);
-                break;
+                // fall through
             case (CommandCode::cos):
-                spu->status = CommandCos(spu);
+                spu->status = CommandOneElemArithm(spu, command_code);
                 break;
             case (CommandCode::pop):
                 spu->status = CommandPop(spu);
@@ -165,11 +175,11 @@ static SPUErrors CommandPush(spu_t* spu)
 
     elem_t val = POISON;
 
-    spu->status = HandlePushSPU(spu, &val, &push);
+    spu->status = HandlePushInfo(spu, &val, &push);
     RETURN_IF_SPUERROR(spu->status);
 
-    ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);
-    RETURN_CONVERTED_ERROR(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
+    ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);   // мб с еррорс че то надо менять
+    RETURN_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
     return spu->status;
 }
@@ -181,7 +191,7 @@ static SPUErrors CommandOutput(spu_t* spu)
     elem_t val = POISON;
 
     ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
-    RETURN_CONVERTED_ERROR(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR);
+    RETURN_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     printf("%g\n", (double) val / MULTIPLIER);
 
@@ -190,151 +200,69 @@ static SPUErrors CommandOutput(spu_t* spu)
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandSubstract(spu_t* spu)
+static inline elem_t Substract(elem_t val1, elem_t val2)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val1 != POISON);
+    assert(val2 != POISON);
 
-    elem_t val1 = POISON;
-    elem_t val2 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    elem_t result = val2 - val1;
-
-    error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return val2 - val1;
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandAdd(spu_t* spu)
+static inline elem_t Add(elem_t val1, elem_t val2)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val1 != POISON);
+    assert(val2 != POISON);
 
-    elem_t val1 = POISON;
-    elem_t val2 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    elem_t result = val2 + val1;
-
-    error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return val2 + val1;
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandMultiply(spu_t* spu)
+static inline elem_t Multiply(elem_t val1, elem_t val2)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val1 != POISON);
+    assert(val2 != POISON);
 
-    elem_t val1 = POISON;
-    elem_t val2 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    elem_t result = (val2 * val1) / MULTIPLIER;
-
-    error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return (val2 * val1) / MULTIPLIER;
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandDivide(spu_t* spu)
+static inline elem_t Divide(elem_t val1, elem_t val2)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val1 != POISON);
+    assert(val2 != POISON);
 
-    elem_t val1 = POISON;
-    elem_t val2 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    error = (ERRORS) StackPop(&(spu->stack), &val2);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    elem_t result = (MULTIPLIER * val2) / val1;
-
-    error = (ERRORS) StackPush(&(spu->stack), result);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return (MULTIPLIER * val2) / val1;
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandSqrt(spu_t* spu)
+static inline elem_t Sqrt(elem_t val)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val != POISON);
 
-    elem_t val1 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    val1 = (elem_t) sqrt((long double) (val1 * MULTIPLIER));
-
-    error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return (elem_t) sqrt((long double) (val * MULTIPLIER));
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandCos(spu_t* spu)
+static inline elem_t Cos(elem_t val)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val != POISON);
 
-    elem_t val1 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    val1 = (elem_t) (cos((long double) val1 / MULTIPLIER) * MULTIPLIER);
-
-    error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return (elem_t) (cos((long double) val / MULTIPLIER) * MULTIPLIER);
 }
 
 //-------------------------------------------------------------
 
-static SPUErrors CommandSin(spu_t* spu)
+static inline elem_t Sin(elem_t val)
 {
-    ERRORS error = ERRORS::NONE;
+    assert(val != POISON);
 
-    elem_t val1 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    val1 = (elem_t) (sin((long double) val1 / MULTIPLIER) * MULTIPLIER);
-
-    error = (ERRORS) StackPush(&(spu->stack), val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return (SPUErrors::NONE);
+    return (elem_t) (sin((long double) val / MULTIPLIER) * MULTIPLIER);
 }
 
 //-------------------------------------------------------------
@@ -352,7 +280,7 @@ static SPUErrors CommandPop(spu_t* spu)
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_CONVERTED_ERROR(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
 
     spu->registers[reg] = val1;
 
@@ -361,15 +289,7 @@ static SPUErrors CommandPop(spu_t* spu)
 
 //-------------------------------------------------------------
 
-static void ClearInput(FILE* fp)
-{
-    int ch = 0;
-    while ((ch = fgetc(fp)) != '\n' && ch != EOF) {}
-}
-
-//-------------------------------------------------------------
-
-static SPUErrors HandlePushSPU(spu_t* spu, elem_t* val, PushInfo* push)
+static SPUErrors HandlePushInfo(spu_t* spu, elem_t* val, PushInfo* push)
 {
     assert(spu);
     assert(push);
@@ -479,13 +399,14 @@ static void PrintRegisters(FILE* fp, const spu_t* spu)
 
 //-----------------------------------------------------------------------------------------------------
 
-static int64_t* ByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error)
+static int64_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error)
 {
     assert(fp);
     assert(file_name);
     assert(error);
 
     int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
+    // мб можно как в дисасм просто массив сделать
 
     if (byte_buf == nullptr)
     {
@@ -508,9 +429,121 @@ static int64_t* ByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error
 
 //-----------------------------------------------------------------------------------------------------
 
-static inline void ByteBufferDtor(int64_t* byte_buf)
+static inline void SPUByteBufferDtor(spu_t* spu)
 {
-    assert(byte_buf);
+    assert(spu);
 
-    free(byte_buf);
+    free(spu->byte_buf);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static SPUErrors CommandTwoElemArithm(spu_t* spu, CommandCode operation)
+{
+    assert(spu);
+
+    ERRORS error = ERRORS::NONE;
+
+    elem_t val1 = POISON;
+    elem_t val2 = POISON;
+
+    error = (ERRORS) StackPop(&(spu->stack), &val1);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+
+    error = (ERRORS) StackPop(&(spu->stack), &val2);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+
+    elem_t result = ALU(spu, operation, val1, val2);
+
+    error = (ERRORS) StackPush(&(spu->stack), result);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
+
+    return (SPUErrors::NONE);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static SPUErrors CommandOneElemArithm(spu_t* spu, CommandCode operation)
+{
+    assert(spu);
+
+    ERRORS error = ERRORS::NONE;
+
+    elem_t val = POISON;
+
+    error = (ERRORS) StackPop(&(spu->stack), &val);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+
+    elem_t result = ALU(spu, operation, val);
+
+    error = (ERRORS) StackPush(&(spu->stack), result);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
+
+    return (SPUErrors::NONE);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2)
+{
+    assert(spu);
+
+    elem_t result = POISON;
+
+    switch (operation)
+    {
+        case (CommandCode::sub):
+            result = Substract(val1, val2);
+            break;
+        case (CommandCode::add):
+            result = Add(val1, val2);
+            break;
+        case (CommandCode::mul):
+            result = Multiply(val1, val2);
+            break;
+        case (CommandCode::div):
+            result = Divide(val1, val2);
+            break;
+        case (CommandCode::sqrt):
+            result = Sqrt(val1);
+            break;
+        case (CommandCode::sin):
+            result = Sin(val1);
+            break;
+        case (CommandCode::cos):
+            result = Cos(val1);
+            break;
+        default:
+            return POISON;
+    }
+
+    return result;
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static SPUErrors CommandIn(spu_t* spu)
+{
+    assert(spu);
+
+    ERRORS error = ERRORS::NONE;
+
+    elem_t val = POISON;
+
+    error = GetElement(&val);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::USER_QUIT);
+
+    error = (ERRORS) StackPush(&(spu->stack), val * MULTIPLIER);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR);
+
+    return (SPUErrors::NONE);
+}
+
+//-----------------------------------------------------------------------------------------------------
+
+static void CommandSpeak()
+{
+    system("say i love counter strike 2");
+
+    PrintLog("speak completed\n");
 }

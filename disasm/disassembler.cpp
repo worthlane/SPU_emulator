@@ -57,6 +57,9 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
                 current_byte += sprintf(current_byte, " %s", val);
                 break;
             }
+            case (CommandCode::speak):
+                current_byte += sprintf(current_byte, "%s", SPEAK);
+                break;
             case (CommandCode::in):
                 current_byte += sprintf(current_byte, "%s", IN);
                 break;

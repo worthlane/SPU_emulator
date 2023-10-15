@@ -5,6 +5,8 @@
 #include <math.h>
 #include <assert.h>
 
+#include <stdio.h>
+
 /// stack element type
 typedef long long elem_t;
 

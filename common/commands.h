@@ -26,6 +26,8 @@ enum class CommandCode
     sin,
     cos,
 
+    speak,
+
     unk
 };
 
@@ -121,6 +123,8 @@ static const char* DIV  = "div";
 static const char* SQRT = "sqrt";
 static const char* SIN  = "sin";
 static const char* COS  = "cos";
+
+static const char* SPEAK  = "speak";
 
 //---------------------------------------
 

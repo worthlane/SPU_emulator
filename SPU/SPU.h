@@ -11,6 +11,8 @@ enum class SPUErrors
 {
     NONE = 0,
 
+    USER_QUIT,
+
     WRONG_SIGNATURE,
 
     UNKNOWN_REGISTER,
