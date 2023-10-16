@@ -79,10 +79,10 @@ int SPUDump(FILE* fp, const void* stk, const char* func, const char* file, const
 #endif
 #define CHECK_SPU(spu)      do                                                              \
                             {                                                               \
-                                SPUVerify((spu), __func__, __FILE__, __LINE__)              \
+                                SPUVerify((spu), __func__, __FILE__, __LINE__);             \
                                 if (spu->status != SPUErrors::NONE)                         \
                                 {                                                           \
-                                    LogDump(SPUDump, (spu), __func__, __FILE__, __LINE);    \
+                                    LogDump(SPUDump, (spu), __func__, __FILE__, __LINE__);  \
                                     return spu->status;                                     \
                                 }                                                           \
                             } while(0)

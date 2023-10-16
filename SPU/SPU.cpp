@@ -115,6 +115,8 @@ SPUErrors RunSPU(spu_t* spu)
 
     while (true)
     {
+        CHECK_SPU(spu);
+
         command_code    = (CommandCode) spu->byte_buf[spu->position++];
 
         bool  quit_cycle_flag = false;
@@ -152,14 +154,13 @@ SPUErrors RunSPU(spu_t* spu)
                 spu->status = CommandPop(spu);
                 break;
             case (CommandCode::HLT_ID):
-                return SPUErrors::NONE;
+                return (spu->status = SPUErrors::NONE);
             case (CommandCode::UNK_ID):
                 // fall through
             default:
                 return (spu->status = SPUErrors::UNKNOWN_COMMAND);
 
         }
-        RETURN_IF_SPUERROR(spu->status);
     }
     return spu->status;
 }
@@ -175,13 +176,13 @@ static SPUErrors CommandPush(spu_t* spu)
 
     elem_t val = POISON;
 
-    spu->status = HandlePushInfo(spu, &val, &push);
-    RETURN_IF_SPUERROR(spu->status);
+    SPUErrors error = HandlePushInfo(spu, &val, &push);
+    RETURN_IF_SPUERROR(error);
 
     ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);   // мб с еррорс че то надо менять
     RETURN_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
 
-    return spu->status;
+    return error;
 }
 
 //-------------------------------------------------------------
@@ -360,6 +361,8 @@ int SPUDump(FILE* fp, const void* spu_ptr, const char* func, const char* file, c
     const spu_t* spu = (const spu_t*) spu_ptr;
 
     LOG_START_MOD(func, file, line);
+
+    fprintf(fp, "v--------- DUMPING STACK -------v\n");
 
     STACK_DUMP(&(spu->stack));
 

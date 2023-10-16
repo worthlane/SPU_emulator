@@ -24,9 +24,7 @@ int main(const int argc, const char* argv[])
 
     RunSPU(&spu);
 
-    DUMP_SPU(&spu);
-
-    if (spu.status != SPUErrors::NONE);
+    if (spu.status != SPUErrors::NONE)
         error.code  = ERRORS::SPU_ERROR;
 
     EXIT_IF_ERROR(&error);
