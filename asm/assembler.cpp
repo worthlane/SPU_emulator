@@ -31,7 +31,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     AddSignature(byte_buf, &position);
 
-    char   command[MAX_COMMAND_LEN] = "";
+    char command[MAX_COMMAND_LEN] = "";
 
     for (size_t line = 0; line < info->line_amt; line++)
     {
@@ -39,14 +39,14 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
         size_t cmd_len       = strlen(command);
         size_t extra_cmd_sym = 0;
 
-        if (!strncmp(command, HLT, MAX_COMMAND_LEN))                                // vvvvvvvvvv HLT CMD
+        if (!strncmp(command, HLT, MAX_COMMAND_LEN))
         {
-            byte_buf[position++] = (int64_t) CommandCode::hlt;
+            byte_buf[position++] = (int64_t) CommandCode::HLT_ID;
             break;
-        }                                                                           // ^^^^^^^^^^^^^^^^^^^
-        else if (!strncmp(command, POP, MAX_COMMAND_LEN))                           // vvvvvvvvvv POP COMMAND
+        }
+        else if (!strncmp(command, POP, MAX_COMMAND_LEN))
         {
-            byte_buf[position++] = (int64_t) CommandCode::pop;
+            byte_buf[position++] = (int64_t) CommandCode::POP_ID;
 
             RegisterCode reg_code = GetRegister(info->lines[line].string + cmd_len,
                                                 &extra_cmd_sym);
@@ -55,12 +55,12 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
             RETURN_IF_ASMERROR(error);
 
             byte_buf[position++] = (int64_t) reg_code;
-        }                                                                           // ^^^^^^^^^^^^^^^^^^^^^
-        else if (!strncmp(command, OUT, MAX_COMMAND_LEN))                           // vvvvvvvvvvvvv OUT CMD
-            byte_buf[position++] = (int64_t) CommandCode::out;                      // ^^^^^^^^^^^^^^^^^^^^^
-        else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))                          // vvvvvvvvvvvvv PUSH COMMAND
+        }
+        else if (!strncmp(command, OUT, MAX_COMMAND_LEN))
+            byte_buf[position++] = (int64_t) CommandCode::OUT_ID;
+        else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))
         {
-            byte_buf[position++] = (int64_t) CommandCode::push;
+            byte_buf[position++] = (int64_t) CommandCode::PUSH_ID;
 
             PushInfo push = {};
 
@@ -70,25 +70,26 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
             byte_buf[position++] = push.reg;
             byte_buf[position++] = push.val;
-        }                                                                           // ^^^^^^^^^^^^^^^^^^^^^^^^^^
+        }
         else if (!strncmp(command, IN, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::in;
+            byte_buf[position++] = (int64_t) CommandCode::IN_ID;
         else if (!strncmp(command, SPEAK, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::speak;
+            byte_buf[position++] = (int64_t) CommandCode::SPEAK_ID;
+
         else if (!strncmp(command, SUB, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::sub;
+            byte_buf[position++] = (int64_t) CommandCode::SUB_ID;
         else if (!strncmp(command, ADD, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::add;
+            byte_buf[position++] = (int64_t) CommandCode::ADD_ID;
         else if (!strncmp(command, MUL, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::mul;
+            byte_buf[position++] = (int64_t) CommandCode::MUL_ID;
         else if (!strncmp(command, DIV, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::div;
+            byte_buf[position++] = (int64_t) CommandCode::DIV_ID;
         else if (!strncmp(command, SQRT, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::sqrt;
+            byte_buf[position++] = (int64_t) CommandCode::SQRT_ID;
         else if (!strncmp(command, SIN, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::sin;
+            byte_buf[position++] = (int64_t) CommandCode::SIN_ID;
         else if (!strncmp(command, COS, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::cos;
+            byte_buf[position++] = (int64_t) CommandCode::COS_ID;
         else
         {
             error = AsmErrors::UNKNOWN_WORD;

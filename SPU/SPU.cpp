@@ -5,7 +5,7 @@
 #include "SPU.h"
 #include "input.h"
 #include "../common/errors.h"
-#include "../common/commands.h"
+#include "../common/asm_funcs.h"
 #include "../common/input_and_output.h"
 
 static const int MULTIPLIER   = 1000;
@@ -111,7 +111,7 @@ SPUErrors RunSPU(spu_t* spu)
     if (cmd_err != AsmErrors::NONE)
         return (spu->status = SPUErrors::WRONG_SIGNATURE);
 
-    CommandCode command_code = CommandCode::hlt;
+    CommandCode command_code = CommandCode::HLT_ID;
 
     while (true)
     {
@@ -120,40 +120,40 @@ SPUErrors RunSPU(spu_t* spu)
         bool  quit_cycle_flag = false;
         switch (command_code)
         {
-            case (CommandCode::speak):
+            case (CommandCode::SPEAK_ID):
                 CommandSpeak();
                 break;
-            case (CommandCode::push):
+            case (CommandCode::PUSH_ID):
                 spu->status = CommandPush(spu);
                 break;
-            case (CommandCode::in):
+            case (CommandCode::IN_ID):
                 spu->status = CommandIn(spu);
                 break;
-            case (CommandCode::out):
+            case (CommandCode::OUT_ID):
                 spu->status = CommandOutput(spu);
                 break;
-            case (CommandCode::sub):
+            case (CommandCode::SUB_ID):
                 // fall through
-            case (CommandCode::add):
+            case (CommandCode::ADD_ID):
                 // fall through
-            case (CommandCode::mul):
+            case (CommandCode::MUL_ID):
                 // fall through
-            case (CommandCode::div):
+            case (CommandCode::DIV_ID):
                 spu->status = CommandTwoElemArithm(spu, command_code);
                 break;
-            case (CommandCode::sqrt):
+            case (CommandCode::SQRT_ID):
                 // fall through
-            case (CommandCode::sin):
+            case (CommandCode::SIN_ID):
                 // fall through
-            case (CommandCode::cos):
+            case (CommandCode::COS_ID):
                 spu->status = CommandOneElemArithm(spu, command_code);
                 break;
-            case (CommandCode::pop):
+            case (CommandCode::POP_ID):
                 spu->status = CommandPop(spu);
                 break;
-            case (CommandCode::hlt):
+            case (CommandCode::HLT_ID):
                 return SPUErrors::NONE;
-            case (CommandCode::unk):
+            case (CommandCode::UNK_ID):
                 // fall through
             default:
                 return (spu->status = SPUErrors::UNKNOWN_COMMAND);
@@ -492,25 +492,25 @@ static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2)
 
     switch (operation)
     {
-        case (CommandCode::sub):
+        case (CommandCode::SUB_ID):
             result = Substract(val1, val2);
             break;
-        case (CommandCode::add):
+        case (CommandCode::ADD_ID):
             result = Add(val1, val2);
             break;
-        case (CommandCode::mul):
+        case (CommandCode::MUL_ID):
             result = Multiply(val1, val2);
             break;
-        case (CommandCode::div):
+        case (CommandCode::DIV_ID):
             result = Divide(val1, val2);
             break;
-        case (CommandCode::sqrt):
+        case (CommandCode::SQRT_ID):
             result = Sqrt(val1);
             break;
-        case (CommandCode::sin):
+        case (CommandCode::SIN_ID):
             result = Sin(val1);
             break;
-        case (CommandCode::cos):
+        case (CommandCode::COS_ID):
             result = Cos(val1);
             break;
         default:

@@ -37,7 +37,7 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     error = VerifySignature(byte_buf, &position, SIGNATURE, ASM_VER);
     RETURN_IF_ASMERROR(error);
 
-    CommandCode cmd_code = CommandCode::hlt;
+    CommandCode cmd_code = CommandCode::HLT_ID;
 
     while(true)
     {
@@ -46,7 +46,7 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 
         switch (cmd_code)
         {
-            case (CommandCode::push):
+            case (CommandCode::PUSH_ID):
             {
                 current_byte += sprintf(current_byte, "%s", PUSH);
 
@@ -57,37 +57,37 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
                 current_byte += sprintf(current_byte, " %s", val);
                 break;
             }
-            case (CommandCode::speak):
+            case (CommandCode::SPEAK_ID):
                 current_byte += sprintf(current_byte, "%s", SPEAK);
                 break;
-            case (CommandCode::in):
+            case (CommandCode::IN_ID):
                 current_byte += sprintf(current_byte, "%s", IN);
                 break;
-            case (CommandCode::out):
+            case (CommandCode::OUT_ID):
                 current_byte += sprintf(current_byte, "%s", OUT);
                 break;
-            case (CommandCode::sub):
+            case (CommandCode::SUB_ID):
                 current_byte += sprintf(current_byte, "%s", SUB);
                 break;
-            case (CommandCode::add):
+            case (CommandCode::ADD_ID):
                 current_byte += sprintf(current_byte, "%s", ADD);
                 break;
-            case (CommandCode::mul):
+            case (CommandCode::MUL_ID):
                 current_byte += sprintf(current_byte, "%s", MUL);
                 break;
-            case (CommandCode::div):
+            case (CommandCode::DIV_ID):
                 current_byte += sprintf(current_byte, "%s", DIV);
                 break;
-            case (CommandCode::sqrt):
+            case (CommandCode::SQRT_ID):
                 current_byte += sprintf(current_byte, "%s", SQRT);
                 break;
-            case (CommandCode::sin):
+            case (CommandCode::SIN_ID):
                 current_byte += sprintf(current_byte, "%s", SIN);
                 break;
-            case (CommandCode::cos):
+            case (CommandCode::COS_ID):
                 current_byte += sprintf(current_byte, "%s", OUT);
                 break;
-            case (CommandCode::pop):
+            case (CommandCode::POP_ID):
             {
                 current_byte += sprintf(current_byte, "%s", POP);
 
@@ -100,11 +100,11 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
                 current_byte += sprintf(current_byte, " %s", register_name);
                 break;
             }
-            case (CommandCode::hlt):
+            case (CommandCode::HLT_ID):
                 current_byte += sprintf(current_byte, "%s", HLT);
                 quit_cycle_flag = true;
                 break;
-            case (CommandCode::unk):
+            case (CommandCode::UNK_ID):
                 // fall through
             default:
                 error = AsmErrors::UNKNOWN_WORD;

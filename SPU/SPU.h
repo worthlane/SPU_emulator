@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "stack.h"
-#include "../common/commands.h"
+#include "../common/asm_funcs.h"
 #include "../common/input_and_output.h"
 
 enum class SPUErrors

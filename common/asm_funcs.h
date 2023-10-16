@@ -9,26 +9,26 @@
 
 enum class CommandCode
 {
-    hlt  = -1,
+    HLT_ID  = -1,
 
-    out  =  1000 - 7,
+    OUT_ID  =  1000 - 7,
 
-    push,
-    in,
+    PUSH_ID,
+    IN_ID,
 
-    pop,
+    POP_ID,
 
-    sub,
-    add,
-    mul,
-    div,
-    sqrt,
-    sin,
-    cos,
+    SUB_ID,
+    ADD_ID,
+    MUL_ID,
+    DIV_ID,
+    SQRT_ID,
+    SIN_ID,
+    COS_ID,
 
-    speak,
+    SPEAK_ID,
 
-    unk
+    UNK_ID
 };
 
 #ifdef RETURN_IF_ASMERROR
