@@ -16,12 +16,12 @@ DEF_CMD(PUSH,  993 - 7, 1,
 {
     spu->status = CommandPush(spu);
 })
-DEF_CMD(IN,    986 - 7, 1,
+DEF_CMD(IN,    986 - 7, 0,
 {
     spu->status = CommandIn(spu);
 })
 
-DEF_CMD(POP,   979 - 7, 0,
+DEF_CMD(POP,   979 - 7, 1,
 {
     spu->status = CommandPop(spu);
 })

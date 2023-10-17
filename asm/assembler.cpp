@@ -8,7 +8,7 @@
 
 // ============ ARGUMENTS FUNCS ============
 
-static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
+static AsmErrors HandleCmdArguments(const int id, int64_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len);
 
 static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
@@ -24,18 +24,19 @@ static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t b
 static inline void PrintBytesInBIN(const void* buf, size_t size,
                                    size_t amt, FILE* out_stream);
 
-#define DEF_CMD(name, num, have_args, ...)                                                  \
+// -----------------------------------------------------------------------------------
+
+#define DEF_CMD(name, id, have_args, ...)                                                   \
                 if (!strncmp(command, name, MAX_COMMAND_LEN))                               \
                 {                                                                           \
                     byte_buf[position++] = (int64_t) CommandCode::ID_##name;                \
                     if (have_args)                                                          \
                     {                                                                       \
-                        error = HandleCmdArguments(CommandCode::ID_##name,                  \
-                                                   byte_buf, &position,     \
+                        error = HandleCmdArguments(id, byte_buf, &position,                 \
                                                    info->lines[line].string, &cmd_len);     \
                         RETURN_IF_ASMERROR(error);                                          \
                     }                                                                       \
-                    if (num == (int) CommandCode::ID_HLT)                                   \
+                    if (id == (int) CommandCode::ID_HLT)                                    \
                         break;                                                              \
                 }                                                                           \
                 else
@@ -95,7 +96,6 @@ static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
     size_t read_symbols     = 0;
     sscanf(line_ptr + *cmd_len, "%s%n", reg, &read_symbols);
 
-    // space between cmd and reg---v
     *cmd_len += read_symbols;
 
     RegisterCode reg_code = TranslateRegisterToByte(reg);
@@ -105,7 +105,7 @@ static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
 
 //------------------------------------------------------------------
 
-static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
+static AsmErrors HandleCmdArguments(const int id, int64_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
@@ -113,9 +113,9 @@ static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* p
     assert(cmd_len);
     assert(line_ptr);
 
-    if (id == CommandCode::ID_PUSH)
+    if (id == (int) CommandCode::ID_PUSH)
         return HandleArgumentsPUSH(byte_buf, position, line_ptr, cmd_len); // можно ли так писать?
-    else if (id == CommandCode::ID_POP)
+    else if (id == (int) CommandCode::ID_POP)
         return HandleArgumentsPOP(byte_buf, position, line_ptr, cmd_len);
 
     return AsmErrors::NONE;
@@ -151,7 +151,6 @@ static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
         push.reg = false;
         push.val = value;
 
-        //               v---- space betwen cmd and value
         *cmd_len += read_symbols;
     }
 
