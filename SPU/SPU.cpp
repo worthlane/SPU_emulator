@@ -105,6 +105,11 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 //-------------------------------------------------------------
 
+#define DEF_CMD(name, num, have_args, code)     \
+        case (CommandCode::ID_##name):          \
+                code                            \
+                break;                          \
+
 SPUErrors RunSPU(spu_t* spu)
 {
     AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER);
@@ -122,46 +127,16 @@ SPUErrors RunSPU(spu_t* spu)
         bool  quit_cycle_flag = false;
         switch (command_code)
         {
-            case (CommandCode::ID_SPEAK):
-                CommandSpeak();
-                break;
-            case (CommandCode::ID_PUSH):
-                spu->status = CommandPush(spu);
-                break;
-            case (CommandCode::ID_IN):
-                spu->status = CommandIn(spu);
-                break;
-            case (CommandCode::ID_OUT):
-                spu->status = CommandOutput(spu);
-                break;
-            case (CommandCode::ID_SUB):
-                // fall through
-            case (CommandCode::ID_ADD):
-                // fall through
-            case (CommandCode::ID_MUL):
-                // fall through
-            case (CommandCode::ID_DIV):
-                spu->status = CommandTwoElemArithm(spu, command_code);
-                break;
-            case (CommandCode::ID_SQRT):
-                // fall through
-            case (CommandCode::ID_SIN):
-                // fall through
-            case (CommandCode::ID_COS):
-                spu->status = CommandOneElemArithm(spu, command_code);
-                break;
-            case (CommandCode::ID_POP):
-                spu->status = CommandPop(spu);
-                break;
-            case (CommandCode::ID_HLT):
-                return (spu->status = SPUErrors::NONE);
+            #include "../common/commands.h"
+
             default:
                 return (spu->status = SPUErrors::UNKNOWN_COMMAND);
-
         }
     }
     return spu->status;
 }
+
+#undef DEF_CMD
 
 //-------------------------------------------------------------
 
