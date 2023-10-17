@@ -111,7 +111,7 @@ SPUErrors RunSPU(spu_t* spu)
     if (cmd_err != AsmErrors::NONE)
         return (spu->status = SPUErrors::WRONG_SIGNATURE);
 
-    CommandCode command_code = CommandCode::HLT_ID;
+    CommandCode command_code = CommandCode::ID_HLT;
 
     while (true)
     {
@@ -122,41 +122,39 @@ SPUErrors RunSPU(spu_t* spu)
         bool  quit_cycle_flag = false;
         switch (command_code)
         {
-            case (CommandCode::SPEAK_ID):
+            case (CommandCode::ID_SPEAK):
                 CommandSpeak();
                 break;
-            case (CommandCode::PUSH_ID):
+            case (CommandCode::ID_PUSH):
                 spu->status = CommandPush(spu);
                 break;
-            case (CommandCode::IN_ID):
+            case (CommandCode::ID_IN):
                 spu->status = CommandIn(spu);
                 break;
-            case (CommandCode::OUT_ID):
+            case (CommandCode::ID_OUT):
                 spu->status = CommandOutput(spu);
                 break;
-            case (CommandCode::SUB_ID):
+            case (CommandCode::ID_SUB):
                 // fall through
-            case (CommandCode::ADD_ID):
+            case (CommandCode::ID_ADD):
                 // fall through
-            case (CommandCode::MUL_ID):
+            case (CommandCode::ID_MUL):
                 // fall through
-            case (CommandCode::DIV_ID):
+            case (CommandCode::ID_DIV):
                 spu->status = CommandTwoElemArithm(spu, command_code);
                 break;
-            case (CommandCode::SQRT_ID):
+            case (CommandCode::ID_SQRT):
                 // fall through
-            case (CommandCode::SIN_ID):
+            case (CommandCode::ID_SIN):
                 // fall through
-            case (CommandCode::COS_ID):
+            case (CommandCode::ID_COS):
                 spu->status = CommandOneElemArithm(spu, command_code);
                 break;
-            case (CommandCode::POP_ID):
+            case (CommandCode::ID_POP):
                 spu->status = CommandPop(spu);
                 break;
-            case (CommandCode::HLT_ID):
+            case (CommandCode::ID_HLT):
                 return (spu->status = SPUErrors::NONE);
-            case (CommandCode::UNK_ID):
-                // fall through
             default:
                 return (spu->status = SPUErrors::UNKNOWN_COMMAND);
 
@@ -495,25 +493,25 @@ static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2)
 
     switch (operation)
     {
-        case (CommandCode::SUB_ID):
+        case (CommandCode::ID_SUB):
             result = Substract(val1, val2);
             break;
-        case (CommandCode::ADD_ID):
+        case (CommandCode::ID_ADD):
             result = Add(val1, val2);
             break;
-        case (CommandCode::MUL_ID):
+        case (CommandCode::ID_MUL):
             result = Multiply(val1, val2);
             break;
-        case (CommandCode::DIV_ID):
+        case (CommandCode::ID_DIV):
             result = Divide(val1, val2);
             break;
-        case (CommandCode::SQRT_ID):
+        case (CommandCode::ID_SQRT):
             result = Sqrt(val1);
             break;
-        case (CommandCode::SIN_ID):
+        case (CommandCode::ID_SIN):
             result = Sin(val1);
             break;
-        case (CommandCode::COS_ID):
+        case (CommandCode::ID_COS):
             result = Cos(val1);
             break;
         default:
