@@ -6,17 +6,19 @@
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
+// ============ ARGUMENTS FUNCS ============
+
 static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
-                                    size_t* extra_cmd_sym, char* input_byte);
+                                    char* line_ptr, size_t* cmd_len);
 
 static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
-                                     size_t* extra_cmd_sym, char* input_byte);
+                                     char* line_ptr, size_t* cmd_len);
 static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
-                                    size_t* extra_cmd_sym, char* input_byte);
+                                    char* line_ptr, size_t* cmd_len);
 
-static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym);
+// =========================================
 
-static size_t CountElemLen(elem_t value);
+static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len);
 
 static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt);
 static inline void PrintBytesInBIN(const void* buf, size_t size,
@@ -29,8 +31,8 @@ static inline void PrintBytesInBIN(const void* buf, size_t size,
                     if (have_args)                                                          \
                     {                                                                       \
                         error = HandleCmdArguments(CommandCode::ID_##name,                  \
-                                                   byte_buf, &position, &extra_cmd_sym,     \
-                                                   info->lines[line].string + cmd_len);     \
+                                                   byte_buf, &position,     \
+                                                   info->lines[line].string, &cmd_len);     \
                         RETURN_IF_ASMERROR(error);                                          \
                     }                                                                       \
                     if (num == (int) CommandCode::ID_HLT)                                   \
@@ -59,9 +61,8 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     for (size_t line = 0; line < info->line_amt; line++)
     {
-        sscanf(info->lines[line].string, "%s", command);
-        size_t cmd_len       = strlen(command);
-        size_t extra_cmd_sym = 0;
+        size_t cmd_len = 0;
+        sscanf(info->lines[line].string, "%s%n", command, &cmd_len);
 
         #include "../common/commands.h"
 
@@ -69,7 +70,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
         RETURN_IF_ASMERROR(error);
 
-        error = SyntaxCheckRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym);
+        error = SyntaxCheckRemainingString(info->lines[line].string + cmd_len);
         RETURN_IF_ASMERROR(error);
     }
 
@@ -85,16 +86,17 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
 //------------------------------------------------------------------
 
-static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym)
+static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
 {
-    assert(input_ptr);
-    assert(extra_cmd_sym);
+    assert(line_ptr);
+    assert(cmd_len);
 
-    char reg[MAX_REG_LEN] = "";
-    sscanf(input_ptr, "%s", reg);
+    char   reg[MAX_REG_LEN] = "";
+    size_t read_symbols     = 0;
+    sscanf(line_ptr + *cmd_len, "%s%n", reg, &read_symbols);
 
     // space between cmd and reg---v
-    *extra_cmd_sym = strlen(reg) + 1;
+    *cmd_len += read_symbols;
 
     RegisterCode reg_code = TranslateRegisterToByte(reg);
 
@@ -104,17 +106,17 @@ static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym)
 //------------------------------------------------------------------
 
 static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
-                                    size_t* extra_cmd_sym, char* input_byte)
+                                    char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
     assert(position);
-    assert(extra_cmd_sym);
-    assert(input_byte);
+    assert(cmd_len);
+    assert(line_ptr);
 
     if (id == CommandCode::ID_PUSH)
-        return HandleArgumentsPUSH(byte_buf, position, extra_cmd_sym, input_byte); // можно ли так писать?
+        return HandleArgumentsPUSH(byte_buf, position, line_ptr, cmd_len); // можно ли так писать?
     else if (id == CommandCode::ID_POP)
-        return HandleArgumentsPOP(byte_buf, position, extra_cmd_sym, input_byte);
+        return HandleArgumentsPOP(byte_buf, position, line_ptr, cmd_len);
 
     return AsmErrors::NONE;
 }
@@ -122,21 +124,22 @@ static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* p
 //------------------------------------------------------------------
 
 static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
-                                     size_t* extra_cmd_sym, char* input_byte)
+                                     char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
     assert(position);
-    assert(extra_cmd_sym);
-    assert(input_byte);
+    assert(cmd_len);
+    assert(line_ptr);
 
-    elem_t value = 0;
-    int    read  = sscanf(input_byte, "%ld", &value);
+    elem_t value        = 0;
+    size_t read_symbols = 0;
+    int    read  = sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
 
     PushInfo push = {};
 
     if (read == 0)
     {
-        RegisterCode reg_code = GetRegister(input_byte, extra_cmd_sym);
+        RegisterCode reg_code = GetRegister(line_ptr, cmd_len);
         if (reg_code == RegisterCode::unk)
             return AsmErrors::INVALID_REGISTER;
 
@@ -149,7 +152,7 @@ static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
         push.val = value;
 
         //               v---- space betwen cmd and value
-        *extra_cmd_sym = 1 + CountElemLen(push.val);
+        *cmd_len += read_symbols;
     }
 
     byte_buf[(*position)++] = push.reg;
@@ -161,39 +164,20 @@ static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
 //------------------------------------------------------------------
 
 static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
-                                    size_t* extra_cmd_sym, char* input_byte)
+                                    char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
     assert(position);
-    assert(extra_cmd_sym);
-    assert(input_byte);
+    assert(cmd_len);
+    assert(line_ptr);
 
-    RegisterCode reg_code = GetRegister(input_byte, extra_cmd_sym);
+    RegisterCode reg_code = GetRegister(line_ptr, cmd_len);
     if (reg_code == RegisterCode::unk)
         return AsmErrors::INVALID_REGISTER;
 
     byte_buf[(*position)++] = (int64_t) reg_code;
 
     return AsmErrors::NONE;
-}
-
-//------------------------------------------------------------------
-
-static size_t CountElemLen(elem_t value)
-{
-    size_t cnt = 0;
-
-    if (value < 0)
-        cnt++;
-
-    do
-    {
-        cnt++;
-        value /= 10;
-    }
-    while (value);
-
-    return cnt;
 }
 
 //------------------------------------------------------------------
