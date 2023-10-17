@@ -8,7 +8,31 @@
 #include "../common/log_funcs.h"
 
 static void ClearInput(FILE* fp);
-static AsmErrors ReadPushTarget(const int64_t* byte_buf, size_t* position, char* val);
+
+static AsmErrors PrintCmdArguments(const int id, const int64_t* byte_buf,
+                                   size_t* position, char** current_byte);
+
+static AsmErrors PrintArgumentsPUSH(const int64_t* byte_buf, size_t* position, char** current_byte);
+static AsmErrors PrintArgumentsPOP(const int64_t* byte_buf, size_t* position, char** current_byte);
+
+// --------------------------------------------------------------------------------
+
+#define DEF_CMD(name, id, have_args, ...)                                           \
+        case (CommandCode::ID_##name):                                              \
+        {                                                                           \
+            current_byte += sprintf(current_byte, "%s", name);                      \
+                                                                                    \
+            if (have_args)                                                          \
+            {                                                                       \
+                error = PrintCmdArguments(id, byte_buf, &position, &current_byte);  \
+                RETURN_IF_ASMERROR(error);                                          \
+            }                                                                       \
+            if (id == (int) CommandCode::ID_HLT)                                    \
+                quit_cycle_flag = true;                                             \
+                                                                                    \
+            break;                                                                  \
+        }
+
 
 AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 {
@@ -24,7 +48,7 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     if (size == 0)
         error = AsmErrors::READ_BYTE_CODE;
     RETURN_IF_ASMERROR(error);
-    // =====================================================
+    // ===================================================== мб в функцию сунуть пока хз как
 
     // ================================= ASM BUFFER INIT
     char* asm_buf      = (char*) calloc(MAX_ASM_CODE_LEN, sizeof(char));
@@ -32,7 +56,7 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     if (asm_buf == nullptr)
         error = AsmErrors::ALLOCATE_MEM;
     RETURN_IF_ASMERROR(error);
-    // =================================================
+    // ================================================= и это тоже
 
     error = VerifySignature(byte_buf, &position, SIGNATURE, ASM_VER);
     RETURN_IF_ASMERROR(error);
@@ -46,64 +70,8 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
 
         switch (cmd_code)
         {
-            case (CommandCode::ID_PUSH):
-            {
-                current_byte += sprintf(current_byte, "%s", PUSH);
+            #include "../common/commands.h"
 
-                char val[MAX_WORD_LEN] = "";
-                error = ReadPushTarget(byte_buf, &position, val);
-                RETURN_IF_ASMERROR(error);
-
-                current_byte += sprintf(current_byte, " %s", val);
-                break;
-            }
-            case (CommandCode::ID_SPEAK):
-                current_byte += sprintf(current_byte, "%s", SPEAK);
-                break;
-            case (CommandCode::ID_IN):
-                current_byte += sprintf(current_byte, "%s", IN);
-                break;
-            case (CommandCode::ID_OUT):
-                current_byte += sprintf(current_byte, "%s", OUT);
-                break;
-            case (CommandCode::ID_SUB):
-                current_byte += sprintf(current_byte, "%s", SUB);
-                break;
-            case (CommandCode::ID_ADD):
-                current_byte += sprintf(current_byte, "%s", ADD);
-                break;
-            case (CommandCode::ID_MUL):
-                current_byte += sprintf(current_byte, "%s", MUL);
-                break;
-            case (CommandCode::ID_DIV):
-                current_byte += sprintf(current_byte, "%s", DIV);
-                break;
-            case (CommandCode::ID_SQRT):
-                current_byte += sprintf(current_byte, "%s", SQRT);
-                break;
-            case (CommandCode::ID_SIN):
-                current_byte += sprintf(current_byte, "%s", SIN);
-                break;
-            case (CommandCode::ID_COS):
-                current_byte += sprintf(current_byte, "%s", OUT);
-                break;
-            case (CommandCode::ID_POP):
-            {
-                current_byte += sprintf(current_byte, "%s", POP);
-
-                RegisterCode reg = (RegisterCode) byte_buf[position++];
-                char register_name[MAX_REG_LEN] = "";
-
-                error = TranslateByteToRegister(reg, register_name);
-                RETURN_IF_ASMERROR(error);
-
-                current_byte += sprintf(current_byte, " %s", register_name);
-                break;
-            }
-            case (CommandCode::ID_HLT):
-                current_byte += sprintf(current_byte, "%s", HLT);
-                quit_cycle_flag = true;
-                break;
             default:
                 error = AsmErrors::UNKNOWN_WORD;
         }
@@ -122,6 +90,8 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     return AsmErrors::NONE;
 }
 
+#undef DEF_CMD
+
 //------------------------------------------------------------------
 
 static void ClearInput(FILE* fp)
@@ -132,17 +102,19 @@ static void ClearInput(FILE* fp)
 
 //------------------------------------------------------------------
 
-static AsmErrors ReadPushTarget(const int64_t* byte_buf, size_t* position, char* val)
+static AsmErrors PrintArgumentsPUSH(const int64_t* byte_buf, size_t* position, char** current_byte)
 {
     assert(byte_buf);
     assert(position);
-    assert(val);
+    assert(current_byte);
 
     AsmErrors error = AsmErrors::NONE;
 
     PushInfo push = {};
     push.reg = byte_buf[(*position)++];
     push.val = byte_buf[(*position)++];
+
+    char val[MAX_WORD_LEN] = "";
 
     if (push.reg == false)
     {
@@ -157,5 +129,46 @@ static AsmErrors ReadPushTarget(const int64_t* byte_buf, size_t* position, char*
             return error;
     }
 
+    *current_byte += sprintf(*current_byte, " %s", val);
+
     return error;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors PrintArgumentsPOP(const int64_t* byte_buf, size_t* position, char** current_byte)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(current_byte);
+
+    AsmErrors error = AsmErrors::NONE;
+
+    RegisterCode reg = (RegisterCode) byte_buf[(*position)++];
+    char register_name[MAX_REG_LEN] = "";
+
+    error = TranslateByteToRegister(reg, register_name);
+    if (error != AsmErrors::NONE)
+        return error;
+
+    *current_byte += sprintf(*current_byte, " %s", register_name);
+
+    return error;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors PrintCmdArguments(const int id, const int64_t* byte_buf,
+                                   size_t* position, char** current_byte)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(current_byte);
+
+    if (id == (int) CommandCode::ID_PUSH)
+        return PrintArgumentsPUSH(byte_buf, position, current_byte);
+    else if (id == (int) CommandCode::ID_POP)
+        return PrintArgumentsPOP(byte_buf, position, current_byte);
+
+    return AsmErrors::NONE;
 }
