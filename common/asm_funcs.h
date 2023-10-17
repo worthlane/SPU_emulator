@@ -7,29 +7,15 @@
 #include "input_and_output.h"
 #include "log_funcs.h"
 
+#define DEF_CMD(name, num, ...) \
+          ID_##name = num,
+
 enum class CommandCode
 {
-    HLT_ID  = -1,
-
-    OUT_ID  =  1000 - 7,
-
-    PUSH_ID,
-    IN_ID,
-
-    POP_ID,
-
-    SUB_ID,
-    ADD_ID,
-    MUL_ID,
-    DIV_ID,
-    SQRT_ID,
-    SIN_ID,
-    COS_ID,
-
-    SPEAK_ID,
-
-    UNK_ID
+    #include "commands.h"
 };
+
+#undef DEF_CMD
 
 #ifdef RETURN_IF_ASMERROR
 #undef RETURN_IF_ASMERROR

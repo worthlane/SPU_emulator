@@ -6,13 +6,37 @@
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
+static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
+                                    size_t* extra_cmd_sym, char* input_byte);
+
+static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
+                                     size_t* extra_cmd_sym, char* input_byte);
+static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
+                                    size_t* extra_cmd_sym, char* input_byte);
+
 static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym);
-static AsmErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte);
+
 static size_t CountElemLen(elem_t value);
 
 static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt);
 static inline void PrintBytesInBIN(const void* buf, size_t size,
                                    size_t amt, FILE* out_stream);
+
+#define DEF_CMD(name, num, have_args, ...)                                                  \
+                if (!strncmp(command, name, MAX_COMMAND_LEN))                               \
+                {                                                                           \
+                    byte_buf[position++] = (int64_t) CommandCode::ID_##name;                \
+                    if (have_args)                                                          \
+                    {                                                                       \
+                        error = HandleCmdArguments(CommandCode::ID_##name,                  \
+                                                   byte_buf, &position, &extra_cmd_sym,     \
+                                                   info->lines[line].string + cmd_len);     \
+                        RETURN_IF_ASMERROR(error);                                          \
+                    }                                                                       \
+                    if (num == (int) CommandCode::ID_HLT)                                   \
+                        break;                                                              \
+                }                                                                           \
+                else
 
 AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info)
 {
@@ -39,61 +63,10 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
         size_t cmd_len       = strlen(command);
         size_t extra_cmd_sym = 0;
 
-        if (!strncmp(command, HLT, MAX_COMMAND_LEN))
-        {
-            byte_buf[position++] = (int64_t) CommandCode::HLT_ID;
-            break;
-        }
-        else if (!strncmp(command, POP, MAX_COMMAND_LEN))
-        {
-            byte_buf[position++] = (int64_t) CommandCode::POP_ID;
+        #include "../common/commands.h"
 
-            RegisterCode reg_code = GetRegister(info->lines[line].string + cmd_len,
-                                                &extra_cmd_sym);
-            if (reg_code == RegisterCode::unk)
-                error    =  AsmErrors::INVALID_REGISTER;
-            RETURN_IF_ASMERROR(error);
+        /*else*/ error = AsmErrors::UNKNOWN_WORD;
 
-            byte_buf[position++] = (int64_t) reg_code;
-        }
-        else if (!strncmp(command, OUT, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::OUT_ID;
-        else if (!strncmp(command, PUSH, MAX_COMMAND_LEN))
-        {
-            byte_buf[position++] = (int64_t) CommandCode::PUSH_ID;
-
-            PushInfo push = {};
-
-            error = HandlePushCommand(&push, &extra_cmd_sym,
-                                      info->lines[line].string + cmd_len);
-            RETURN_IF_ASMERROR(error);
-
-            byte_buf[position++] = push.reg;
-            byte_buf[position++] = push.val;
-        }
-        else if (!strncmp(command, IN, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::IN_ID;
-        else if (!strncmp(command, SPEAK, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::SPEAK_ID;
-
-        else if (!strncmp(command, SUB, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::SUB_ID;
-        else if (!strncmp(command, ADD, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::ADD_ID;
-        else if (!strncmp(command, MUL, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::MUL_ID;
-        else if (!strncmp(command, DIV, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::DIV_ID;
-        else if (!strncmp(command, SQRT, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::SQRT_ID;
-        else if (!strncmp(command, SIN, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::SIN_ID;
-        else if (!strncmp(command, COS, MAX_COMMAND_LEN))
-            byte_buf[position++] = (int64_t) CommandCode::COS_ID;
-        else
-        {
-            error = AsmErrors::UNKNOWN_WORD;
-        }
         RETURN_IF_ASMERROR(error);
 
         error = SyntaxCheckRemainingString(info->lines[line].string + cmd_len + extra_cmd_sym);
@@ -107,6 +80,8 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     return AsmErrors::NONE;
 }
+
+#undef DEF_CMD();
 
 //------------------------------------------------------------------
 
@@ -128,10 +103,36 @@ static RegisterCode GetRegister(char* input_ptr, size_t* extra_cmd_sym)
 
 //------------------------------------------------------------------
 
-static AsmErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* input_byte)
+static AsmErrors HandleCmdArguments(CommandCode id, int64_t* byte_buf, size_t* position,
+                                    size_t* extra_cmd_sym, char* input_byte)
 {
+    assert(byte_buf);
+    assert(position);
+    assert(extra_cmd_sym);
+    assert(input_byte);
+
+    if (id == CommandCode::ID_PUSH)
+        return HandleArgumentsPUSH(byte_buf, position, extra_cmd_sym, input_byte); // можно ли так писать?
+    else if (id == CommandCode::ID_POP)
+        return HandleArgumentsPOP(byte_buf, position, extra_cmd_sym, input_byte);
+
+    return AsmErrors::NONE;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
+                                     size_t* extra_cmd_sym, char* input_byte)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(extra_cmd_sym);
+    assert(input_byte);
+
     elem_t value = 0;
-    int read     = sscanf(input_byte, "%ld", &value);
+    int    read  = sscanf(input_byte, "%ld", &value);
+
+    PushInfo push = {};
 
     if (read == 0)
     {
@@ -139,17 +140,39 @@ static AsmErrors HandlePushCommand(PushInfo* push, size_t* extra_cmd_sym, char* 
         if (reg_code == RegisterCode::unk)
             return AsmErrors::INVALID_REGISTER;
 
-        push->reg = true;
-        push->val = (int) reg_code;
+        push.reg = true;
+        push.val = (int) reg_code;
     }
     else
     {
-        push->reg = false;
-        push->val = value;
+        push.reg = false;
+        push.val = value;
 
         //               v---- space betwen cmd and value
-        *extra_cmd_sym = 1 + CountElemLen(push->val);
+        *extra_cmd_sym = 1 + CountElemLen(push.val);
     }
+
+    byte_buf[(*position)++] = push.reg;
+    byte_buf[(*position)++] = push.val;
+
+    return AsmErrors::NONE;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
+                                    size_t* extra_cmd_sym, char* input_byte)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(extra_cmd_sym);
+    assert(input_byte);
+
+    RegisterCode reg_code = GetRegister(input_byte, extra_cmd_sym);
+    if (reg_code == RegisterCode::unk)
+        return AsmErrors::INVALID_REGISTER;
+
+    byte_buf[(*position)++] = (int64_t) reg_code;
 
     return AsmErrors::NONE;
 }
