@@ -1,4 +1,4 @@
-all: asm disasm spu
+all: asm spu
 
 asm:
 	cd asm && make makedirs && make && cd ..
@@ -8,7 +8,10 @@ spu:
 
 .PHONY: asm spu
 
-.PHONY: clean disasm
+.PHONY: clean disasm run
+
+run:
+	./asm/asm && ./SPU/spu
 
 clean:
 	cd asm && make clean && cd ..
