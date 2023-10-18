@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "disassembler.h"
-#include "../common/asm_funcs.h"
+#include "../common/asm_input_and_output.h"
 #include "../common/log_funcs.h"
 #include "../common/errors.h"
 

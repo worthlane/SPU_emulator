@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "../common/asm_funcs.h"
+#include "../common/asm_input_and_output.h"
 #include "../common/input_and_output.h"
 
 AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream);

@@ -5,7 +5,7 @@
 #include "SPU.h"
 #include "input.h"
 #include "../common/errors.h"
-#include "../common/asm_funcs.h"
+#include "../common/asm_input_and_output.h"
 #include "../common/input_and_output.h"
 
 static const int MULTIPLIER   = 1000;
