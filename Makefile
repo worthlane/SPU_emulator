@@ -11,7 +11,7 @@ spu:
 .PHONY: clean disasm run
 
 run:
-	./asm/asm && ./SPU/spu
+	./asm/asm assets/asm_code.txt assets/byte_code.txt assets/byte_code.bin && ./SPU/spu assets/byte_code.bin
 
 clean:
 	cd asm && make clean && cd ..
