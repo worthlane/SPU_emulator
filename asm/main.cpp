@@ -34,7 +34,7 @@ int main(const int argc, const char* argv[])
     else
         output_bin_file = argv[3];
 
-    Storage info = {};
+    Storage info = {}; // TODO убрать
 
     FILE* in_stream  = OpenInputFile(input_file, &info, &error);
     EXIT_IF_ERROR(&error);
@@ -45,7 +45,7 @@ int main(const int argc, const char* argv[])
     FILE* out_bin_stream = OpenBinOutputFile(output_bin_file, &error);
     EXIT_IF_ERROR(&error);
 
-    AsmErrors asm_err = Assembly(in_stream, out_stream, out_bin_stream, &info);
+    AsmErrors asm_err = Assembly(in_stream, out_stream, out_bin_stream, &info); // TODO буффер
     if (asm_err != AsmErrors::NONE)
     {
         error.code = ERRORS::ASM_ERROR;

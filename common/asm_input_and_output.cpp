@@ -30,24 +30,24 @@ char* PrintRemainingString(const char* const source, char* destination)
 
 //------------------------------------------------------------------
 
-void AddSignature(int64_t* byte_buf, size_t* position)
+void AddSignature(code_t* byte_buf, size_t* position)
 {
     assert(byte_buf);
 
-    byte_buf[(*position)++] = (int64_t) SIGNATURE;
-    byte_buf[(*position)++] = (int64_t) ASM_VER;
+    byte_buf[(*position)++] = (code_t) SIGNATURE;
+    byte_buf[(*position)++] = (code_t) ASM_VER;
 }
 
 //------------------------------------------------------------------
 
-AsmErrors VerifySignature(int64_t* byte_buf, size_t* position,
-                          const signature_t expected_sign, const int expected_ver)
+AsmErrors VerifySignature(code_t* byte_buf, size_t* position,
+                          const code_t expected_sign, const int expected_ver)
 {
     assert(byte_buf);
     assert(position);
 
-    signature_t sign = byte_buf[(*position)++];
-    int         ver  = byte_buf[(*position)++];
+    code_t sign = byte_buf[(*position)++];
+    code_t ver  = byte_buf[(*position)++];
 
     if (sign != expected_sign)
         return AsmErrors::INCORRECT_SIGNATURE;

@@ -9,18 +9,18 @@
 
 static void ClearInput(FILE* fp);
 
-static AsmErrors PrintCmdArguments(const int id, const int64_t* byte_buf,
+static AsmErrors PrintCmdArguments(const int id, const code_t* byte_buf,
                                    size_t* position, char** current_byte);
 
-static AsmErrors PrintArgumentsPUSH(const int64_t* byte_buf, size_t* position, char** current_byte);
-static AsmErrors PrintArgumentsPOP(const int64_t* byte_buf, size_t* position, char** current_byte);
+static AsmErrors PrintArgumentsPUSH(const code_t* byte_buf, size_t* position, char** current_byte);
+static AsmErrors PrintArgumentsPOP(const code_t* byte_buf, size_t* position, char** current_byte);
 
 // --------------------------------------------------------------------------------
 
 #define DEF_CMD(name, id, have_args, ...)                                           \
         case (CommandCode::ID_##name):                                              \
         {                                                                           \
-            current_byte += sprintf(current_byte, "%s", name);                      \
+            current_byte += sprintf(current_byte, "%s", #name);                      \
                                                                                     \
             if (have_args)                                                          \
             {                                                                       \
@@ -42,8 +42,8 @@ AsmErrors DisAssembly(FILE* in_stream, FILE* out_stream)
     AsmErrors error = AsmErrors::NONE;
 
     // =============================== BYTE BUFFER INIT
-    int64_t byte_buf[MAX_BYTE_CODE_LEN] = {};
-    size_t  size     = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, in_stream);
+    code_t byte_buf[MAX_BYTE_CODE_LEN] = {};
+    size_t  size     = fread(byte_buf, sizeof(code_t), MAX_BYTE_CODE_LEN, in_stream);
     size_t  position = 0;
     if (size == 0)
         error = AsmErrors::READ_BYTE_CODE;
@@ -102,7 +102,7 @@ static void ClearInput(FILE* fp)
 
 //------------------------------------------------------------------
 
-static AsmErrors PrintArgumentsPUSH(const int64_t* byte_buf, size_t* position, char** current_byte)
+static AsmErrors PrintArgumentsPUSH(const code_t* byte_buf, size_t* position, char** current_byte)
 {
     assert(byte_buf);
     assert(position);
@@ -136,7 +136,7 @@ static AsmErrors PrintArgumentsPUSH(const int64_t* byte_buf, size_t* position, c
 
 //------------------------------------------------------------------
 
-static AsmErrors PrintArgumentsPOP(const int64_t* byte_buf, size_t* position, char** current_byte)
+static AsmErrors PrintArgumentsPOP(const code_t* byte_buf, size_t* position, char** current_byte)
 {
     assert(byte_buf);
     assert(position);
@@ -158,7 +158,7 @@ static AsmErrors PrintArgumentsPOP(const int64_t* byte_buf, size_t* position, ch
 
 //------------------------------------------------------------------
 
-static AsmErrors PrintCmdArguments(const int id, const int64_t* byte_buf,
+static AsmErrors PrintCmdArguments(const int id, const code_t* byte_buf,
                                    size_t* position, char** current_byte)
 {
     assert(byte_buf);

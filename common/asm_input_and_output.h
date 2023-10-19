@@ -53,8 +53,8 @@ enum class AsmErrors
     INVALID_REGISTER
 };
 
-static const signature_t SIGNATURE = 'DEC0';
-static const int         ASM_VER   = 2;
+static const code_t SIGNATURE = 'DEC0';
+static const code_t ASM_VER   = 2;
 
 //           code word len ---------v        v----- version len
 static const size_t SIGNATURE_LEN = 10 + 2 + 1;
@@ -91,35 +91,14 @@ struct PushInfo
     elem_t       val;
 };
 
-//--------------COMMANDS LIST------------
-
-static const char* HLT  = "hlt";
-
-static const char* OUT  = "out";
-
-static const char* PUSH = "push";
-static const char* IN   = "in";
-
-static const char* POP  = "pop";
-
-static const char* SUB  = "sub";
-static const char* ADD  = "add";
-static const char* MUL  = "mul";
-static const char* DIV  = "div";
-static const char* SQRT = "sqrt";
-static const char* SIN  = "sin";
-static const char* COS  = "cos";
-
-static const char* SPEAK  = "speak";
-
 //---------------------------------------
 
 char* PrintRemainingString(const char* const source, char* dest);
 AsmErrors SyntaxCheckRemainingString(const char* const source);
 
-void AddSignature(int64_t* byte_buf, size_t* position);
-AsmErrors VerifySignature(int64_t* byte_buf, size_t* position,
-                          const signature_t expected_sign, const int expected_ver);
+void AddSignature(code_t* byte_buf, size_t* position);
+AsmErrors VerifySignature(code_t* byte_buf, size_t* position,
+                          const code_t expected_sign, const int expected_ver);
 
 RegisterCode TranslateRegisterToByte(const char* reg);
 AsmErrors TranslateByteToRegister(const RegisterCode reg, char* register_name);

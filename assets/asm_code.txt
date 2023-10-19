@@ -1,8 +1,9 @@
-push 5
-push 3
-pop rax
-push rax
-push rax
-mul
-out
-hlt
+PUSH 5
+PUSH 3
+JMP 4
+POP rax
+PUSH rax
+PUSH rax
+MUL
+OUT
+HLT

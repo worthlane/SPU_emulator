@@ -40,7 +40,7 @@ struct SPUInfo
 
     const char* file_name;
     FILE*       fp;
-    int64_t*    byte_buf;
+    code_t*    byte_buf;
     size_t      position;
 
     elem_t      registers[REG_AMT];
@@ -48,7 +48,7 @@ struct SPUInfo
     SPUErrors   status;
 };
 
-static const int SPU_VER = 2;
+static const code_t SPU_VER = 2;
 
 typedef struct SPUInfo spu_t;
 
@@ -63,6 +63,21 @@ typedef struct SPUInfo spu_t;
                                                     return error;                                       \
                                                 }                                                       \
                                             } while(0)
+
+#ifdef UPDATE_SPU_STATUS_IF_NOT_EQUAL
+#undef UPDATE_SPU_STATUS_IF_NOT_EQUAL
+
+#endif
+#define UPDATE_SPU_STATUS_IF_NOT_EQUAL(check_err, expected_err, new_status, spu_status)     \
+                                                                                            \
+do                                                                                          \
+{                                                                                           \
+    if ((check_err) != (expected_err))                                                      \
+    {                                                                                       \
+        (spu_status) = (new_status);                                                        \
+        break;                                                                              \
+    }                                                                                       \
+} while(0)
 
 static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin";
 

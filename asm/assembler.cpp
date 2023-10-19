@@ -2,34 +2,38 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <string.h>
 
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
 // ============ ARGUMENTS FUNCS ============
 
-static AsmErrors HandleCmdArguments(const int id, int64_t* byte_buf, size_t* position,
+static AsmErrors HandleCmdArguments(const int id, code_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len);
 
-static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
+static AsmErrors HandleArgumentsPUSH(code_t* byte_buf, size_t* position,
                                      char* line_ptr, size_t* cmd_len);
-static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
+static AsmErrors HandleArgumentsPOP(code_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len);
+static AsmErrors HandleArgumentsJMP(code_t* byte_buf, size_t* position,
+                                     char* line_ptr, size_t* cmd_len);
 
 // =========================================
 
 static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len);
 
-static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt);
+static inline void PrintBytesInTXT(FILE* out_stream, code_t* byte_buf, size_t byte_amt);
 static inline void PrintBytesInBIN(const void* buf, size_t size,
                                    size_t amt, FILE* out_stream);
 
 // -----------------------------------------------------------------------------------
 
 #define DEF_CMD(name, id, have_args, ...)                                                   \
-                if (!strncmp(command, name, MAX_COMMAND_LEN))                               \
+                if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                     \
                 {                                                                           \
-                    byte_buf[position++] = (int64_t) CommandCode::ID_##name;                \
+                    byte_buf[position++] = (code_t) CommandCode::ID_##name;                \
                     if (have_args)                                                          \
                     {                                                                       \
                         error = HandleCmdArguments(id, byte_buf, &position,                 \
@@ -48,7 +52,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     AsmErrors error = AsmErrors::NONE;
 
-    int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
+    code_t* byte_buf = (code_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(code_t));
     size_t   position = 0;
 
     if (byte_buf == nullptr)
@@ -105,7 +109,7 @@ static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
 
 //------------------------------------------------------------------
 
-static AsmErrors HandleCmdArguments(const int id, int64_t* byte_buf, size_t* position,
+static AsmErrors HandleCmdArguments(const int id, code_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
@@ -117,13 +121,33 @@ static AsmErrors HandleCmdArguments(const int id, int64_t* byte_buf, size_t* pos
         return HandleArgumentsPUSH(byte_buf, position, line_ptr, cmd_len); // можно ли так писать?
     else if (id == (int) CommandCode::ID_POP)
         return HandleArgumentsPOP(byte_buf, position, line_ptr, cmd_len);
+    else if (id == (int) CommandCode::ID_JMP)
+        return HandleArgumentsJMP(byte_buf, position, line_ptr, cmd_len);
 
     return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------
 
-static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
+static AsmErrors HandleArgumentsJMP(code_t* byte_buf, size_t* position,
+                                     char* line_ptr, size_t* cmd_len)
+{
+    assert(byte_buf);
+    assert(position);
+    assert(cmd_len);
+    assert(line_ptr);
+
+    elem_t value = 0;
+    int    read  = sscanf(line_ptr + *cmd_len, "%ld%n", &value);
+
+    byte_buf[(*position)++] = value;
+
+    return AsmErrors::NONE;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors HandleArgumentsPUSH(code_t* byte_buf, size_t* position,
                                      char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
@@ -162,7 +186,7 @@ static AsmErrors HandleArgumentsPUSH(int64_t* byte_buf, size_t* position,
 
 //------------------------------------------------------------------
 
-static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
+static AsmErrors HandleArgumentsPOP(code_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
@@ -174,20 +198,20 @@ static AsmErrors HandleArgumentsPOP(int64_t* byte_buf, size_t* position,
     if (reg_code == RegisterCode::unk)
         return AsmErrors::INVALID_REGISTER;
 
-    byte_buf[(*position)++] = (int64_t) reg_code;
+    byte_buf[(*position)++] = (code_t) reg_code;
 
     return AsmErrors::NONE;
 }
 
 //------------------------------------------------------------------
 
-static inline void PrintBytesInTXT(FILE* out_stream, int64_t* byte_buf, size_t byte_amt)
+static inline void PrintBytesInTXT(FILE* out_stream, code_t* byte_buf, size_t byte_amt)
 {
     assert(out_stream);
     assert(byte_buf);
 
     for (size_t i = 0; i < byte_amt; i++)
-        fprintf(out_stream, "%016llX\n", byte_buf[i]);
+        fprintf(out_stream, "%08X\n", byte_buf[i]);
 }
 
 //------------------------------------------------------------------

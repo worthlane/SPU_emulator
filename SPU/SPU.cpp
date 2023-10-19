@@ -15,7 +15,7 @@ static void PrintRegisters(FILE* fp, const spu_t* spu);
 
 static SPUErrors HandlePushInfo(spu_t* spu, elem_t* val, PushInfo* push);
 
-static int64_t*    SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error);
+static code_t*    SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error);
 static inline void SPUByteBufferDtor(spu_t* spu);
 
 // =========== COMMANDS =========
@@ -50,7 +50,7 @@ static inline elem_t Sin(elem_t val);
 
 //-------------------------------------------------------------
 
-ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
+ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO переместить еррор
 {
     char* buffer = nullptr;
 
@@ -69,7 +69,7 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name)
     error->code = (ERRORS) StackCtor(&(spu->stack));
     RETURN_IF_ERROR(error->code);
 
-    int64_t* byte_buf = SPUByteBufferCtor(fp, file_name, error);
+    code_t* byte_buf = SPUByteBufferCtor(fp, file_name, error);
     RETURN_IF_ERROR(error->code);
 
     spu->byte_buf        = byte_buf;
@@ -112,17 +112,18 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 SPUErrors RunSPU(spu_t* spu)
 {
-    AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER);
+    AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER); // TODO в стор
     if (cmd_err != AsmErrors::NONE)
+    {
+        PrintLog("ERROR: INCORRECT SIGNATURE. PROGRAM STOPPED\n\n");
         return (spu->status = SPUErrors::WRONG_SIGNATURE);
-
-    CommandCode command_code = CommandCode::ID_HLT;
+    }
 
     while (true)
     {
         CHECK_SPU(spu);
 
-        command_code    = (CommandCode) spu->byte_buf[spu->position++];
+        CommandCode command_code = (CommandCode) spu->byte_buf[spu->position++]; // TODO на отдельную строчку
 
         bool  quit_cycle_flag = false;
         switch (command_code)
@@ -132,44 +133,51 @@ SPUErrors RunSPU(spu_t* spu)
             default:
                 return (spu->status = SPUErrors::UNKNOWN_COMMAND);
         }
+
+        if (quit_cycle_flag)
+            break;
     }
     return spu->status;
 }
 
 #undef DEF_CMD
 
-//-------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------
 
-static SPUErrors CommandPush(spu_t* spu)
+static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2)
 {
-    PushInfo push = {};
+    assert(spu);
 
-    push.reg = (unsigned int) spu->byte_buf[spu->position++];
-    push.val = (elem_t)       spu->byte_buf[spu->position++];
+    elem_t result = POISON;
 
-    elem_t val = POISON;
+    switch (operation)
+    {
+        case (CommandCode::ID_SUB):
+            result = Substract(val1, val2);
+            break;
+        case (CommandCode::ID_ADD):
+            result = Add(val1, val2);
+            break;
+        case (CommandCode::ID_MUL):
+            result = Multiply(val1, val2);
+            break;
+        case (CommandCode::ID_DIV):
+            result = Divide(val1, val2);
+            break;
+        case (CommandCode::ID_SQRT):
+            result = Sqrt(val1);
+            break;
+        case (CommandCode::ID_SIN):
+            result = Sin(val1);
+            break;
+        case (CommandCode::ID_COS):
+            result = Cos(val1);
+            break;
+        default:
+            return POISON;
+    }
 
-    SPUErrors error = HandlePushInfo(spu, &val, &push);
-    RETURN_IF_SPUERROR(error);
-
-    ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);   // мб с еррорс че то надо менять
-    RETURN_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
-
-    return error;
-}
-
-//-------------------------------------------------------------
-
-static SPUErrors CommandOutput(spu_t* spu)
-{
-    elem_t val = POISON;
-
-    ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
-    RETURN_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    printf("%g\n", (double) val / MULTIPLIER);
-
-    return (SPUErrors::NONE);
+    return result;
 }
 
 //-------------------------------------------------------------
@@ -237,28 +245,6 @@ static inline elem_t Sin(elem_t val)
     assert(val != POISON);
 
     return (elem_t) (sin((long double) val / MULTIPLIER) * MULTIPLIER);
-}
-
-//-------------------------------------------------------------
-
-static SPUErrors CommandPop(spu_t* spu)
-{
-    ERRORS error = ERRORS::NONE;
-
-    RegisterCode reg = (RegisterCode) spu->byte_buf[spu->position++];
-
-    AsmErrors reg_err = VerifyRegister(reg);
-    if (reg_err != AsmErrors::NONE)
-        return (SPUErrors::UNKNOWN_REGISTER);
-
-    elem_t val1 = POISON;
-
-    error = (ERRORS) StackPop(&(spu->stack), &val1);
-    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
-
-    spu->registers[reg] = val1;
-
-    return (SPUErrors::NONE);
 }
 
 //-------------------------------------------------------------
@@ -375,13 +361,13 @@ static void PrintRegisters(FILE* fp, const spu_t* spu)
 
 //-----------------------------------------------------------------------------------------------------
 
-static int64_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error)
+static code_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* error)
 {
     assert(fp);
     assert(file_name);
     assert(error);
 
-    int64_t* byte_buf = (int64_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(int64_t));
+    code_t* byte_buf = (code_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(code_t));
     // мб можно как в дисасм просто массив сделать
 
     if (byte_buf == nullptr)
@@ -390,7 +376,7 @@ static int64_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* er
         return nullptr;
     }
 
-    size_t read = fread(byte_buf, sizeof(int64_t), MAX_BYTE_CODE_LEN, fp);
+    size_t read = fread(byte_buf, sizeof(code_t), MAX_BYTE_CODE_LEN, fp);
 
     if (read == 0)
     {
@@ -460,44 +446,6 @@ static SPUErrors CommandOneElemArithm(spu_t* spu, CommandCode operation)
 
 //-----------------------------------------------------------------------------------------------------
 
-static elem_t ALU(spu_t* spu, CommandCode operation, elem_t val1, elem_t val2)
-{
-    assert(spu);
-
-    elem_t result = POISON;
-
-    switch (operation)
-    {
-        case (CommandCode::ID_SUB):
-            result = Substract(val1, val2);
-            break;
-        case (CommandCode::ID_ADD):
-            result = Add(val1, val2);
-            break;
-        case (CommandCode::ID_MUL):
-            result = Multiply(val1, val2);
-            break;
-        case (CommandCode::ID_DIV):
-            result = Divide(val1, val2);
-            break;
-        case (CommandCode::ID_SQRT):
-            result = Sqrt(val1);
-            break;
-        case (CommandCode::ID_SIN):
-            result = Sin(val1);
-            break;
-        case (CommandCode::ID_COS):
-            result = Cos(val1);
-            break;
-        default:
-            return POISON;
-    }
-
-    return result;
-}
-
-//-----------------------------------------------------------------------------------------------------
-
 static SPUErrors CommandIn(spu_t* spu)
 {
     assert(spu);
@@ -522,4 +470,60 @@ static void CommandSpeak()
     system("say i love counter strike 2");
 
     PrintLog("speak completed\n");
+}
+
+//-------------------------------------------------------------
+
+static SPUErrors CommandPush(spu_t* spu)
+{
+    PushInfo push = {};
+
+    push.reg = (unsigned int) spu->byte_buf[spu->position++];
+    push.val = (elem_t)       spu->byte_buf[spu->position++];
+
+    elem_t val = POISON;
+
+    SPUErrors error = HandlePushInfo(spu, &val, &push);
+    RETURN_IF_SPUERROR(error);
+
+    ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);   // мб с еррорс че то надо менять
+    RETURN_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR);
+
+    return error;
+}
+
+//-------------------------------------------------------------
+
+static SPUErrors CommandOutput(spu_t* spu)
+{
+    elem_t val = POISON;
+
+    ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
+    RETURN_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR);
+
+    printf("%g\n", (double) val / MULTIPLIER);
+
+    return (SPUErrors::NONE);
+}
+
+//-------------------------------------------------------------
+
+static SPUErrors CommandPop(spu_t* spu)
+{
+    ERRORS error = ERRORS::NONE;
+
+    RegisterCode reg = (RegisterCode) spu->byte_buf[spu->position++];
+
+    AsmErrors reg_err = VerifyRegister(reg);
+    if (reg_err != AsmErrors::NONE)
+        return (SPUErrors::UNKNOWN_REGISTER);
+
+    elem_t val1 = POISON;
+
+    error = (ERRORS) StackPop(&(spu->stack), &val1);
+    RETURN_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR);
+
+    spu->registers[reg] = val1;
+
+    return (SPUErrors::NONE);
 }
