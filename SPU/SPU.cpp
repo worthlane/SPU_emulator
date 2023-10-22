@@ -5,7 +5,7 @@
 #include "SPU.h"
 #include "input.h"
 #include "../common/errors.h"
-#include "../common/asm_input_and_output.h"
+#include "../common/asm_common.h"
 #include "../common/input_and_output.h"
 
 static const int MULTIPLIER   = 1000;
@@ -125,7 +125,7 @@ SPUErrors RunSPU(spu_t* spu)
 
         CommandCode command_code = (CommandCode) spu->byte_buf[spu->position++]; // TODO на отдельную строчку
 
-        bool  quit_cycle_flag = false;
+        bool quit_cycle_flag = false;
         switch (command_code)
         {
             #include "../common/commands.h"

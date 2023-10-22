@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "assembler.h"
-#include "../common/asm_input_and_output.h"
+#include "../common/asm_common.h"
 #include "../common/log_funcs.h"
 #include "../common/errors.h"
 

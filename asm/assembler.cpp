@@ -8,6 +8,9 @@
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
+static const size_t MAX_LABELS_AMT = 10;
+static const size_t MAX_LABEL_NAME = 100;
+
 // ============ ARGUMENTS FUNCS ============
 
 static AsmErrors HandleCmdArguments(const int id, code_t* byte_buf, size_t* position,
@@ -28,12 +31,18 @@ static inline void PrintBytesInTXT(FILE* out_stream, code_t* byte_buf, size_t by
 static inline void PrintBytesInBIN(const void* buf, size_t size,
                                    size_t amt, FILE* out_stream);
 
+static inline void AddValueInByteCode(code_t* byte_buf, size_t* position, const int* val);
+static inline void LogPrintIntInBytes(const int* value);
+
 // -----------------------------------------------------------------------------------
 
 #define DEF_CMD(name, id, have_args, ...)                                                   \
-                if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                     \
+                if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                          \
                 {                                                                           \
-                    byte_buf[position++] = (code_t) CommandCode::ID_##name;                \
+                    byte_buf[position++] = (code_t) CommandCode::ID_##name;                 \
+                                                                                            \
+                    LogPrintIntInBytes(&byte_buf[position - 1]);                            \
+                                                                                            \
                     if (have_args)                                                          \
                     {                                                                       \
                         error = HandleCmdArguments(id, byte_buf, &position,                 \
@@ -52,7 +61,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     AsmErrors error = AsmErrors::NONE;
 
-    code_t* byte_buf = (code_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(code_t));
+    code_t* byte_buf  = (code_t*) calloc(MAX_BYTE_CODE_LEN, sizeof(code_t));
     size_t   position = 0;
 
     if (byte_buf == nullptr)
@@ -64,20 +73,29 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
     char command[MAX_COMMAND_LEN] = "";
 
+    PrintLog("Assemble result: \n"
+             "{\n"
+             "//SIGNATURE//\n");
+
     for (size_t line = 0; line < info->line_amt; line++)
     {
+        PrintLog("%-4d | ", position * sizeof(int));
+
         size_t cmd_len = 0;
         sscanf(info->lines[line].string, "%s%n", command, &cmd_len);
 
         #include "../common/commands.h"
 
         /*else*/ error = AsmErrors::UNKNOWN_WORD;
-
         RETURN_IF_ASMERROR(error);
 
         error = SyntaxCheckRemainingString(info->lines[line].string + cmd_len);
         RETURN_IF_ASMERROR(error);
+
+        PrintLog("\n");
     }
+
+    PrintLog("\n}\n");
 
     PrintBytesInBIN(byte_buf, sizeof(*byte_buf), position, out_bin_stream);
     PrintBytesInTXT(out_stream, byte_buf, position);
@@ -87,7 +105,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
     return AsmErrors::NONE;
 }
 
-#undef DEF_CMD();
+#undef DEF_CMD;
 
 //------------------------------------------------------------------
 
@@ -137,10 +155,13 @@ static AsmErrors HandleArgumentsJMP(code_t* byte_buf, size_t* position,
     assert(cmd_len);
     assert(line_ptr);
 
-    elem_t value = 0;
-    int    read  = sscanf(line_ptr + *cmd_len, "%ld%n", &value);
+    int value = 0;
+    size_t read_symbols = 0;
+    sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
 
-    byte_buf[(*position)++] = value;
+    *cmd_len += read_symbols;
+
+    AddValueInByteCode(byte_buf, position, &value);
 
     return AsmErrors::NONE;
 }
@@ -159,7 +180,8 @@ static AsmErrors HandleArgumentsPUSH(code_t* byte_buf, size_t* position,
     size_t read_symbols = 0;
     int    read  = sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
 
-    PushInfo push = {};
+    int reg_flag = false;
+    int val      = 0;
 
     if (read == 0)
     {
@@ -167,19 +189,19 @@ static AsmErrors HandleArgumentsPUSH(code_t* byte_buf, size_t* position,
         if (reg_code == RegisterCode::unk)
             return AsmErrors::INVALID_REGISTER;
 
-        push.reg = true;
-        push.val = (int) reg_code;
+        reg_flag = true;
+        val      = (int) reg_code;
     }
     else
     {
-        push.reg = false;
-        push.val = value;
+        reg_flag = false;
+        val      = value;
 
         *cmd_len += read_symbols;
     }
 
-    byte_buf[(*position)++] = push.reg;
-    byte_buf[(*position)++] = push.val;
+    AddValueInByteCode(byte_buf, position, &reg_flag);
+    AddValueInByteCode(byte_buf, position, &val);
 
     return AsmErrors::NONE;
 }
@@ -194,11 +216,11 @@ static AsmErrors HandleArgumentsPOP(code_t* byte_buf, size_t* position,
     assert(cmd_len);
     assert(line_ptr);
 
-    RegisterCode reg_code = GetRegister(line_ptr, cmd_len);
-    if (reg_code == RegisterCode::unk)
+    int reg_code = (int) GetRegister(line_ptr, cmd_len);
+    if (reg_code == (int) RegisterCode::unk)
         return AsmErrors::INVALID_REGISTER;
 
-    byte_buf[(*position)++] = (code_t) reg_code;
+    AddValueInByteCode(byte_buf, position, &reg_code);
 
     return AsmErrors::NONE;
 }
@@ -210,8 +232,14 @@ static inline void PrintBytesInTXT(FILE* out_stream, code_t* byte_buf, size_t by
     assert(out_stream);
     assert(byte_buf);
 
-    for (size_t i = 0; i < byte_amt; i++)
-        fprintf(out_stream, "%08X\n", byte_buf[i]);
+    for (size_t pos = 0; pos < byte_amt * 4; pos+=4)
+    {
+        fprintf(out_stream, "%02X %02X %02X %02X\n",
+                             *((unsigned char*) byte_buf + pos),
+                                  *((unsigned char*) byte_buf + pos + 1),
+                                       *((unsigned char*) byte_buf + pos + 2),
+                                            *((unsigned char*) byte_buf + pos + 3));
+    }
 }
 
 //------------------------------------------------------------------
@@ -225,3 +253,27 @@ static inline void PrintBytesInBIN(const void* buf, size_t size,
     fwrite(buf, size, amt, out_stream);
 }
 
+//------------------------------------------------------------------
+
+static inline void AddValueInByteCode(code_t* byte_buf, size_t* position, const int* val)
+{
+    assert(position);
+    assert(byte_buf);
+
+    byte_buf[(*position)++] = *val;
+
+    LogPrintIntInBytes(val);
+}
+
+//------------------------------------------------------------------
+
+static inline void LogPrintIntInBytes(const int* val)
+{
+    assert(val);
+
+    PrintLog("%02X %02X %02X %02X  ",
+              *((unsigned char*) val),
+                   *((unsigned char*) val + 1),
+                        *((unsigned char*) val + 2),
+                             *((unsigned char*) val + 3));
+}

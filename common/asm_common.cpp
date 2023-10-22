@@ -2,7 +2,7 @@
 #include <strings.h>
 #include <ctype.h>
 
-#include "asm_input_and_output.h"
+#include "asm_common.h"
 #include "types.h"
 #include "errors.h"
 

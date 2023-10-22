@@ -149,7 +149,11 @@ DEF_CMD(SPEAK, 923 - 7, 0,
     PrintLog("speak completed\n");
 })
 
-DEF_CMD(JMP, 916 - 7, 0,
+DEF_CMD(JMP, 916 - 7, 1,
 {
-    printf("1\n");
+    size_t start = spu->byte_buf[spu->position++] / sizeof(int);
+
+    PrintLog("start %d %d\n", start, start * 4);
+
+    spu->position = start;
 })
