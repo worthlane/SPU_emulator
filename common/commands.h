@@ -14,7 +14,8 @@ DEF_CMD(OUT, 1000 - 7, ArgumentType::NONE, 4,
     ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);
 
-    printf("%g\n", (double) val / MULTIPLIER);
+    if (val != POISON)
+        printf("%g\n", (double) val / MULTIPLIER);
 })
 
 DEF_CMD(PUSH, 993 - 7, ArgumentType::REG_OR_INT, 12,

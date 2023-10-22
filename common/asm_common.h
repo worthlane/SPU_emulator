@@ -51,6 +51,7 @@ enum class AsmErrors
     INCORRECT_VERSION,
 
     TOO_MANY_LABELS,
+    UNKNOWN_LABEL,
 
     INVALID_REGISTER
 };

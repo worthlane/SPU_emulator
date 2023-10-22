@@ -9,24 +9,24 @@
 #include "assembler.h"
 #include "../common/log_funcs.h"
 
-static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info);
+static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info, label_t* labels);
+static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte);
 
 // ::::::::::::: LABELS FUNCS :::::::::::::
 
 static void InitLabelsArray(label_t* labels, size_t size);
 static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, Storage* text_info);
-
-static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte);
+static int FindLabelInArray(const label_t* labels, const char* label_name);
 
 // ::::::::::::::::::::::::::::::::::::::::
 
 // ============ ARGUMENTS FUNCS ============
 
 static AsmErrors HandleCmdArguments(const int id, code_t* byte_buf, size_t* position,
-                                    char* line_ptr, size_t* cmd_len);
+                                    char* line_ptr, size_t* cmd_len, label_t* labels);
 
 static AsmErrors GetLabelOrIntArgument(code_t* byte_buf, size_t* position,
-                                  char* line_ptr, size_t* cmd_len);
+                                  char* line_ptr, size_t* cmd_len, label_t* labels);
 static AsmErrors GetRegOrIntArgument(code_t* byte_buf, size_t* position,
                                 char* line_ptr, size_t* cmd_len);
 static AsmErrors GetRegArgument(code_t* byte_buf, size_t* position,
@@ -65,7 +65,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
     error = ReadLabelsFromText(labels, MAX_LABELS_AMT, info);
     RETURN_IF_ASMERROR(error);
 
-    error = TranslateTextToByteCode(byte_buf, &position, info);
+    error = TranslateTextToByteCode(byte_buf, &position, info, labels);
     RETURN_IF_ASMERROR(error);
 
     // добавить фри лэйбелс эррей
@@ -80,7 +80,7 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 
 //-----------------------------------------------------------------
 
-#define DEF_CMD(name, id, arg_type, byte_size,  ...)                                 \
+#define DEF_CMD(name, id, arg_type, byte_size,  ...)                                        \
                 if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                          \
                 {                                                                           \
                     byte_buf[(*position)++] = (code_t) CommandCode::ID_##name;              \
@@ -90,14 +90,16 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
                     if (arg_type != ArgumentType::NONE)                                     \
                     {                                                                       \
                         error = HandleCmdArguments((int) arg_type, byte_buf, position,      \
-                                                   text_info->lines[line].string, &cmd_len);\
+                                                   text_info->lines[line].string, &cmd_len, \
+                                                   labels);                                 \
                         RETURN_IF_ASMERROR(error);                                          \
                     }                                                                       \
                 }                                                                           \
                 else
 
-static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info)
+static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info, label_t* labels)
 {
+    assert(labels);
     assert(byte_buf);
     assert(position);
     assert(text_info);
@@ -164,8 +166,9 @@ static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
 //------------------------------------------------------------------
 
 static AsmErrors HandleCmdArguments(const int arg_type, code_t* byte_buf, size_t* position,
-                                    char* line_ptr, size_t* cmd_len)
+                                    char* line_ptr, size_t* cmd_len, label_t* labels)
 {
+    assert(labels);
     assert(byte_buf);
     assert(position);
     assert(cmd_len);
@@ -176,7 +179,7 @@ static AsmErrors HandleCmdArguments(const int arg_type, code_t* byte_buf, size_t
     else if (arg_type == (int) ArgumentType::REG)
         return GetRegArgument(byte_buf, position, line_ptr, cmd_len);
     else if (arg_type == (int) ArgumentType::LABEL_OR_INT)
-        return GetLabelOrIntArgument(byte_buf, position, line_ptr, cmd_len);
+        return GetLabelOrIntArgument(byte_buf, position, line_ptr, cmd_len, labels);
 
     return AsmErrors::NONE;
 }
@@ -184,19 +187,34 @@ static AsmErrors HandleCmdArguments(const int arg_type, code_t* byte_buf, size_t
 //------------------------------------------------------------------
 
 static AsmErrors GetLabelOrIntArgument(code_t* byte_buf, size_t* position,
-                                       char* line_ptr, size_t* cmd_len)
+                                       char* line_ptr, size_t* cmd_len, label_t* labels)
 {
+    assert(labels);
     assert(byte_buf);
     assert(position);
     assert(cmd_len);
     assert(line_ptr);
 
-    int value = 0;
     size_t read_symbols = 0;
-    sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
+    int    value        = 0;
+
+    char label_name[MAX_LABEL_NAME] = "";
+    int read = sscanf(line_ptr + *cmd_len, " :%s%n", label_name, &read_symbols);
+
+    if (read == 0)
+    {
+        sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
+    }
+    else
+    {
+        int label_id = FindLabelInArray(labels, label_name);
+        if (label_id == -1)
+            return AsmErrors::UNKNOWN_LABEL;
+
+        value = labels[label_id].jmp_byte;
+    }
 
     *cmd_len += read_symbols;
-
     AddValueInByteCode(byte_buf, position, &value);
 
     return AsmErrors::NONE;
@@ -396,6 +414,22 @@ static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte)
 }
 
 #undef DEF_CMD
+
+//------------------------------------------------------------------
+
+static int FindLabelInArray(const label_t* labels, const char* label_name)
+{
+    assert(labels);
+    assert(label_name);
+
+    for (int i = 0; i < MAX_LABELS_AMT; i++)
+    {
+        if (!strncmp(label_name, labels[i].label_name, MAX_LABEL_NAME))
+            return i;
+    }
+
+    return -1;
+}
 
 
 
