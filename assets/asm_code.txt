@@ -1,6 +1,8 @@
 PUSH 5
 PUSH 3
-jmp :ABOBA
+PUSH 5
+PUSH 10
+jae :ABOBA
 POP rax
 PUSH rax
 PUSH rax

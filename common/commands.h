@@ -150,11 +150,46 @@ DEF_CMD(SPEAK, 923 - 7, ArgumentType::NONE, 4,
     PrintLog("speak completed\n");
 })
 
+// ............. JMP ..............
+
 DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
 {
     size_t start = spu->byte_buf[spu->position++] / sizeof(int);
 
-    PrintLog("start %d %d\n", start, start * 4);
-
     spu->position = start;
 })
+
+#ifdef MAKE_COND_JMP
+#undef MAKE_COND_JMP
+
+#endif
+#define MAKE_COND_JMP(name, id, operation)                                                                  \
+        DEF_CMD(name, id, ArgumentType::LABEL_OR_INT, 8,                                                    \
+        {                                                                                                   \
+            size_t start = spu->byte_buf[spu->position++] / sizeof(int);                                    \
+                                                                                                            \
+            ERRORS pop_err = ERRORS::NONE;                                                                  \
+                                                                                                            \
+            elem_t val1 = POISON;                                                                           \
+            elem_t val2 = POISON;                                                                           \
+                                                                                                            \
+            pop_err = (ERRORS) StackPop(&(spu->stack), &val1);                                              \
+            UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);       \
+                                                                                                            \
+            pop_err = (ERRORS) StackPop(&(spu->stack), &val2);                                              \
+            UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);       \
+                                                                                                            \
+            if (val1 operation val2)                                                                      \
+                spu->position = start;                                                                      \
+        })
+
+MAKE_COND_JMP(JA, 909 - 7, >)
+MAKE_COND_JMP(JAE, 902 - 7, >=)
+MAKE_COND_JMP(JB, 895 - 7, <)
+MAKE_COND_JMP(JBE, 888 - 7, <=)
+MAKE_COND_JMP(JNE, 881 - 7, !=)
+MAKE_COND_JMP(JE, 874 - 7, ==)
+
+#undef MAKE_COND_JMP
+
+// .............................................
