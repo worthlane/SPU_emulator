@@ -50,11 +50,14 @@ enum class AsmErrors
     INCORRECT_SIGNATURE,
     INCORRECT_VERSION,
 
+    TOO_MANY_LABELS,
+
     INVALID_REGISTER
 };
 
 static const code_t SIGNATURE = 'DEC0';
 static const code_t ASM_VER   = 2;
+static const size_t BYTE_AFTER_SIGNATURE = 2 * sizeof(int);
 
 //           code word len ---------v        v----- version len
 static const size_t SIGNATURE_LEN = 10 + 2 + 1;
@@ -84,6 +87,15 @@ static const size_t MAX_WORD_LEN = 64;
 //======================================
 
 static const size_t MAX_COMMAND_LEN = 10;
+
+enum ArgumentType
+{
+    NONE = 0,
+    INT,
+    LABEL_OR_INT,
+    REG,
+    REG_OR_INT
+};
 
 struct PushInfo
 {

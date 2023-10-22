@@ -2,12 +2,12 @@
 #define DEF_CMD(...) ;
 #endif
 
-DEF_CMD(HLT, -1, 0,
+DEF_CMD(HLT, -1, ArgumentType::NONE, 4,
 {
     return (spu->status = SPUErrors::NONE);
 })
 
-DEF_CMD(OUT, 1000 - 7, 0,
+DEF_CMD(OUT, 1000 - 7, ArgumentType::NONE, 4,
 {
     elem_t val = POISON;
 
@@ -17,7 +17,7 @@ DEF_CMD(OUT, 1000 - 7, 0,
     printf("%g\n", (double) val / MULTIPLIER);
 })
 
-DEF_CMD(PUSH, 993 - 7, 1,
+DEF_CMD(PUSH, 993 - 7, ArgumentType::REG_OR_INT, 12,
 {
     PushInfo push = {};
 
@@ -34,7 +34,7 @@ DEF_CMD(PUSH, 993 - 7, 1,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
 })
 
-DEF_CMD(IN, 986 - 7, 0,
+DEF_CMD(IN, 986 - 7, ArgumentType::NONE, 4,
 {
     ERRORS error = ERRORS::NONE;
     elem_t val = POISON;
@@ -46,7 +46,7 @@ DEF_CMD(IN, 986 - 7, 0,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
 })
 
-DEF_CMD(POP, 979 - 7, 1,
+DEF_CMD(POP, 979 - 7, ArgumentType::REG, 8,
 {
     ERRORS error = ERRORS::NONE;
 
@@ -89,19 +89,19 @@ DEF_CMD(POP, 979 - 7, 1,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);    \
 }
 
-DEF_CMD(SUB, 972 - 7, 0,
+DEF_CMD(SUB, 972 - 7, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(ADD, 965 - 7, 0,
+DEF_CMD(ADD, 965 - 7, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(MUL, 958 - 7, 0,
+DEF_CMD(MUL, 958 - 7, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(DIV, 951 - 7, 0,
+DEF_CMD(DIV, 951 - 7, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
@@ -127,29 +127,29 @@ DEF_CMD(DIV, 951 - 7, 0,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);    \
 }
 
-DEF_CMD(SQRT, 944 - 7, 0,
+DEF_CMD(SQRT, 944 - 7, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
-DEF_CMD(SIN, 937 - 7, 0,
+DEF_CMD(SIN, 937 - 7, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
-DEF_CMD(COS, 930 - 7, 0,
+DEF_CMD(COS, 930 - 7, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
 
 // ================================
 
-DEF_CMD(SPEAK, 923 - 7, 0,
+DEF_CMD(SPEAK, 923 - 7, ArgumentType::NONE, 4,
 {
     system("say i love counter strike 2");
 
     PrintLog("speak completed\n");
 })
 
-DEF_CMD(JMP, 916 - 7, 1,
+DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
 {
     size_t start = spu->byte_buf[spu->position++] / sizeof(int);
 

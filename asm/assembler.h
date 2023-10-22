@@ -11,7 +11,12 @@ AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Stor
 struct LabelInfo
 {
     char*  label_name;
-    size_t curr_byte;
-}
+    size_t jmp_byte;
+};
+
+typedef struct LabelInfo label_t;
+
+static const size_t MAX_LABELS_AMT = 10;
+static const size_t MAX_LABEL_NAME = 100;
 
 #endif

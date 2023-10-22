@@ -105,7 +105,7 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 //-------------------------------------------------------------
 
-#define DEF_CMD(name, num, have_args, code)     \
+#define DEF_CMD(name, num, arg_type, byte_size, code)     \
         case (CommandCode::ID_##name):          \
                 code                            \
                 break;                          \

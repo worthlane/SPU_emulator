@@ -166,6 +166,10 @@ int DumpAsmError(FILE* fp, const void* err, const char* func, const char* file, 
             fprintf(fp, "\nERROR: CAN NOT PRINT VALUE\n\n");
             break;
 
+        case (AsmErrors::TOO_MANY_LABELS):
+            fprintf(fp, "\nERROR: TOO MANY LABELS\n\n");
+            break;
+
         default:
             fprintf(fp, "\nERROR: UNKNOWN ASM ERROR\n\n");
             break;
