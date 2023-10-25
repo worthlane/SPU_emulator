@@ -66,10 +66,13 @@ static const size_t SIGNATURE_LEN = 10 + 2 + 1;
 
 //=============REGISTERS================
 
+
+#pragma GCC diagnostic ignored "-Wunused-variable"
 static const char* RAX = "rax";
 static const char* RBX = "rbx";
 static const char* RCX = "rcx";
 static const char* RDX = "rdx";
+#pragma GCC diagnostic warning "-Wunused-variable"
 
 enum RegisterCode
 {

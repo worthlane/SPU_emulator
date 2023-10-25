@@ -52,15 +52,13 @@ static inline elem_t Sin(elem_t val);
 
 ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO переместить еррор
 {
-    char* buffer = nullptr;
-
     // ============================= OPEN FILE
 
     FILE* fp = fopen(file_name, "rb");
 
     if (fp == NULL)
     {
-        error->data = (char*) file_name;
+        error->data = file_name;
         return (error->code = ERRORS::OPEN_FILE);
     }
 
@@ -77,6 +75,13 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO пе
     spu->file_name       = file_name;
     spu->fp              = fp;
     spu->status          = SPUErrors::NONE;
+
+    AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER);
+    if (cmd_err != AsmErrors::NONE)
+    {
+        PrintLog("ERROR: INCORRECT SIGNATURE. PROGRAM STOPPED\n\n");
+        return ERRORS::SPU_ERROR;
+    }
 
     return error->code;
 }
@@ -112,18 +117,12 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 
 SPUErrors RunSPU(spu_t* spu)
 {
-    AsmErrors cmd_err = VerifySignature(spu->byte_buf, &(spu->position), SIGNATURE, SPU_VER); // TODO в стор
-    if (cmd_err != AsmErrors::NONE)
-    {
-        PrintLog("ERROR: INCORRECT SIGNATURE. PROGRAM STOPPED\n\n");
-        return (spu->status = SPUErrors::WRONG_SIGNATURE);
-    }
-
     while (true)
     {
         CHECK_SPU(spu);
 
-        CommandCode command_code = (CommandCode) spu->byte_buf[spu->position++]; // TODO на отдельную строчку
+        CommandCode command_code = (CommandCode) spu->byte_buf[spu->position];
+        spu->position++;
 
         bool quit_cycle_flag = false;
         switch (command_code)

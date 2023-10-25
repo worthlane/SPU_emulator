@@ -154,7 +154,7 @@ DEF_CMD(SPEAK, 923 - 7, ArgumentType::NONE, 4,
 
 DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
 {
-    size_t start = spu->byte_buf[spu->position++] / sizeof(int);
+    code_t start = spu->byte_buf[spu->position++] / sizeof(int);
 
     spu->position = start;
 })
@@ -166,7 +166,7 @@ DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
 #define MAKE_COND_JMP(name, id, operation)                                                                  \
         DEF_CMD(name, id, ArgumentType::LABEL_OR_INT, 8,                                                    \
         {                                                                                                   \
-            size_t start = spu->byte_buf[spu->position++] / sizeof(int);                                    \
+            code_t start = spu->byte_buf[spu->position++] / sizeof(int);                                    \
                                                                                                             \
             ERRORS pop_err = ERRORS::NONE;                                                                  \
                                                                                                             \

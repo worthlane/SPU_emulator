@@ -83,7 +83,7 @@ struct ErrorInfo
     /// error code
     ERRORS code;
     /// error data
-    void* data;
+    const void* data;
 };
 
 /************************************************************//**
