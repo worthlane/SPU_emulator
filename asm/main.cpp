@@ -7,7 +7,7 @@
 
 static const char* DEFAULT_IN      = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";
 static const char* DEFAULT_OUT     = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
-static const char* DEFAULT_BIN_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin";
+static const char* DEFAULT_BIN_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin"; // TODO поменять
 
 int main(const int argc, const char* argv[])
 {
@@ -45,7 +45,7 @@ int main(const int argc, const char* argv[])
     FILE* out_bin_stream = OpenBinOutputFile(output_bin_file, &error);
     EXIT_IF_ERROR(&error);
 
-    AsmErrors asm_err = Assembly(in_stream, out_stream, out_bin_stream, &info); // TODO буффер
+    AsmErrors asm_err = Assembly(out_stream, out_bin_stream, &info); // TODO буффер
     if (asm_err != AsmErrors::NONE)
     {
         error.code = ERRORS::ASM_ERROR;

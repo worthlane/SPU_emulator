@@ -46,10 +46,8 @@ static inline void LogPrintIntInBytes(const int* value);
 
 // -----------------------------------------------------------------------------------
 
-AsmErrors Assembly(FILE* in_stream, FILE* out_stream, FILE* out_bin_stream, Storage* info)
+AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, Storage* info)
 {
-    assert(in_stream);
-    assert(out_stream);
 
     AsmErrors error = AsmErrors::NONE;
 

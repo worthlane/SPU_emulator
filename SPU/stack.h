@@ -18,7 +18,7 @@
  * 1 for ON
  * 0 for OFF
  ************************************************************/
-#define CANARY_PROTECT 1
+#define CANARY_PROTECT 0
 
 #endif
 
@@ -29,7 +29,7 @@
  * 1 for ON
  * 0 for OFF
  ************************************************************/
-#define HASH_PROTECT 1
+#define HASH_PROTECT 0
 
 #endif
 

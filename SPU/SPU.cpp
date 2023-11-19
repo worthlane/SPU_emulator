@@ -62,7 +62,7 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO пе
         return (error->code = ERRORS::OPEN_FILE);
     }
 
-    // ======================================
+    // ====================================== убрать из стора в мейн
 
     error->code = (ERRORS) StackCtor(&(spu->stack));
     RETURN_IF_ERROR(error->code);
