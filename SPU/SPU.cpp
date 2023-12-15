@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "SPU.h"
+#include "spu.h"
 #include "input.h"
 #include "../common/errors.h"
 #include "../common/asm_common.h"

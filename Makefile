@@ -4,7 +4,7 @@ asm:
 	cd asm && make makedirs && make && cd ..
 
 spu:
-	cd SPU && make makedirs && make && cd ..
+	cd spu && make makedirs && make && cd ..
 
 .PHONY: asm spu
 
@@ -16,7 +16,7 @@ run:
 clean:
 	cd asm && make clean && cd ..
 	cd disasm && make clean && cd ..
-	cd SPU && make clean && cd ..
+	cd spu && make clean && cd ..
 	cd common && rm -rf *.o && cd ..
 
 disasm:
