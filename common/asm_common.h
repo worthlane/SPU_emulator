@@ -5,7 +5,7 @@
 
 #include "types.h"
 #include "input_and_output.h"
-#include "log_funcs.h"
+#include "logs.h"
 
 #define DEF_CMD(name, num, ...) \
           ID_##name = num,
@@ -89,8 +89,6 @@ static const size_t MAX_REG_LEN  = 5;
 static const size_t MAX_WORD_LEN = 64;
 
 //======================================
-
-static const size_t MAX_COMMAND_LEN = 10;
 
 enum ArgumentType
 {

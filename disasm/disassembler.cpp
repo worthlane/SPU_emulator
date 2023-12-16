@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 #include "disassembler.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 
 static void ClearInput(FILE* fp);
 

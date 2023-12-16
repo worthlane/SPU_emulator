@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #include "../common/errors.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 #include "../common/types.h"
 
 /*! \file

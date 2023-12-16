@@ -2,7 +2,7 @@
 
 #include "disassembler.h"
 #include "../common/asm_common.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 #include "../common/errors.h"
 
 static const char* DEFAULT_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";

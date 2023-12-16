@@ -6,6 +6,7 @@
 */
 
 #include <stdio.h>
+#include "logs.h"
 
 #ifdef EXIT_IF_ERROR
 #undef EXIT_IF_ERROR
@@ -13,10 +14,22 @@
 #endif
 #define EXIT_IF_ERROR(error)                do                                                          \
                                             {                                                           \
-                                                if ((error)->code != ERRORS::NONE)                      \
+                                                if ((error)->code != (int) ERRORS::NONE)                \
                                                 {                                                       \
                                                     return LogDump(PrintError, error, __func__,         \
                                                                     __FILE__, __LINE__);                \
+                                                }                                                       \
+                                            } while(0)
+
+#ifdef BREAK_IF_ERROR
+#undef BREAK_IF_ERROR
+
+#endif
+#define BREAK_IF_ERROR(error)                do                                                          \
+                                            {                                                           \
+                                                if ((error)->code != (int) ERRORS::NONE)                \
+                                                {                                                       \
+                                                    return;                                             \
                                                 }                                                       \
                                             } while(0)
 #ifdef RETURN_IF_ERROR
@@ -63,15 +76,11 @@ enum class ERRORS
     /// error while printing data
     PRINT_DATA,
 
-    /// invalid stack error
+    USER_QUIT,
+
     INVALID_STACK,
 
     ASM_ERROR,
-    DISASM_ERROR,
-
-    SPU_ERROR,
-
-    USER_QUIT,
 
     /// unknown error
     UNKNOWN
@@ -81,10 +90,12 @@ enum class ERRORS
 struct ErrorInfo
 {
     /// error code
-    ERRORS code;
+    int code;
     /// error data
     const void* data;
 };
+
+typedef struct ErrorInfo error_t;
 
 /************************************************************//**
  * @brief Prints error from error list
@@ -97,5 +108,7 @@ struct ErrorInfo
  * @return int error code
  ************************************************************/
 int PrintError(FILE* fp, const void* error, const char* func, const char* file, const int line);
+
+int SetErrorData (error_t* error, const char *format, ...);
 
 #endif

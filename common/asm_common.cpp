@@ -123,7 +123,7 @@ int DumpAsmError(FILE* fp, const void* err, const char* func, const char* file, 
 {
     AsmErrors error = *((AsmErrors*) err);
 
-    LOG_START_MOD(func, file, line);
+    LOG_START_DUMP(func, file, line);
 
     switch (error)
     {
@@ -192,7 +192,7 @@ FILE* OpenByteCodeFile(const char* input_file, ErrorInfo* error)
 
     if (in_stream == nullptr)
     {
-        error->code = ERRORS::OPEN_FILE;
+        error->code = (int) ERRORS::OPEN_FILE;
         error->data = (void*) input_file;
         return in_stream;
     }

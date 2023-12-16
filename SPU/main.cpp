@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "stack.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 #include "../common/types.h"
 #include "../common/hash.h"
 #include "SPU.h"

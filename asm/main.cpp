@@ -2,12 +2,9 @@
 
 #include "assembler.h"
 #include "../common/asm_common.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 #include "../common/errors.h"
-
-static const char* DEFAULT_IN      = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/asm_code.txt";
-static const char* DEFAULT_OUT     = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.txt";
-static const char* DEFAULT_BIN_OUT = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin"; // TODO поменять
+#include "../common/file_read.h"
 
 int main(const int argc, const char* argv[])
 {
@@ -15,40 +12,26 @@ int main(const int argc, const char* argv[])
 
     ErrorInfo error = {};
 
-    const char* input_file      = nullptr;
-    const char* output_file     = nullptr;
-    const char* output_bin_file = nullptr;
+    const char* input_file      = GetFileName(argc, argv, 1, "INPUT", &error);
+    const char* output_file     = GetFileName(argc, argv, 2, "WORD OUTPUT", &error);
+    const char* output_bin_file = GetFileName(argc, argv, 3, "BINARY OUTPUT", &error);
 
-    if (argc < 2)
-        input_file = DEFAULT_IN;
-    else
-        input_file = argv[1];
-
-    if (argc < 3)
-        output_file = DEFAULT_OUT;
-    else
-        output_file = argv[2];
-
-    if (argc < 4)
-        output_bin_file = DEFAULT_BIN_OUT;
-    else
-        output_bin_file = argv[3];
-
-    Storage info = {}; // TODO убрать
-
-    FILE* in_stream  = OpenInputFile(input_file, &info, &error);
+    FILE* in_stream      = OpenFile(input_file, "rb", &error);
     EXIT_IF_ERROR(&error);
 
-    FILE* out_stream = OpenOutputFile(output_file, &error);
+    FILE* out_stream     = OpenFile(output_file, "w", &error);
     EXIT_IF_ERROR(&error);
 
-    FILE* out_bin_stream = OpenBinOutputFile(output_bin_file, &error);
+    FILE* out_bin_stream = OpenFile(output_bin_file, "wb", &error);
     EXIT_IF_ERROR(&error);
+
+    LinesStorage info = {};
+    CreateTextStorage(&info, &error, input_file);
 
     AsmErrors asm_err = Assembly(out_stream, out_bin_stream, &info); // TODO буффер
     if (asm_err != AsmErrors::NONE)
     {
-        error.code = ERRORS::ASM_ERROR;
+        error.code = (int) ERRORS::ASM_ERROR;
         EXIT_IF_ERROR(&error);
     }
 

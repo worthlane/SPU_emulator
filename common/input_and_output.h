@@ -1,125 +1,25 @@
-#ifndef __GETOUTINFO_H
-#define __GETOUTINFO_H
+#ifndef __INPUT_AND_OUTPUT_H_
+#define __INPUT_AND_OUTPUT_H_
 
 #include <stdio.h>
-#include <stdlib.h>
 
-/*! \file
-* \brief Contains info about functions, that get data and print it
-*/
+#include "errors.h"
 
-/************************************************************//**
- * @brief Contains info about one line
- ************************************************************/
-struct LineInfo
-{
-    char* string; /// line
-    size_t len;   /// length of string
-};
+static const size_t MAX_STRING_LEN  = 100;
+static const size_t MAX_COMMAND_LEN = 200;
 
-/************************************************************//**
- * @brief Storage with info about buffer
- ************************************************************/
-struct Storage
-{
-    size_t line_amt;            /// amount of lines
-    off_t text_len;             /// amount of symbols in buffer
-    char* buf;                  /// buffer
-    struct LineInfo* lines;     /// structure with info about line
-};
+void SkipSpaces(FILE* fp);
+void ClearInput(FILE* fp);
 
-/************************************************************//**
- * @brief counts amount of symbols in input file
- *
- * @param[in] file_name name of opening file
- * @return amount of symbols in file
- *************************************************************/
-off_t GetFileLength(const char* file_name);
+char* GetDataFromLine(FILE* fp, error_t* error);
+bool DoesLineHaveOtherSymbols(FILE* fp);
 
-/************************************************************//**
- * @brief Prints all lines from buffer
- *
- * @param[in] stream stream, where lines are printing
- * @param[in] lines array of lines structures
- * @param[in] line_amount amount of lines
- * @param[out] error error structure
- * @return true if there was no error
- * @return false if there was an error
- *************************************************************/
-bool PrintAllLines(FILE* stream, const struct LineInfo* lines,
-                   const size_t line_amount, struct ErrorInfo* error);
+const char* GetFileName(const int argc, const char* argv[], const int id, const char* mode, error_t* error);
 
-/************************************************************//**
- * @brief Prints one line
- *
- * @param[in] stream stream, where line is printing
- * @param[in] line structure with info about line, that function prints
- * @param[out] error error structure
- ************************************************************/
-void PrintOneLine(FILE* stream, const struct LineInfo* line, struct ErrorInfo* error);
+FILE* OpenInputFile(const char* file_name, error_t* error);
+FILE* OpenOutputFile(const char* file_name, error_t* error);
 
-/************************************************************//**
- * @brief Create a Text Storage object
- *
- * @param[in] info storage
- * @param[out] error error structure
- * @param[in] FILE_NAME file name
- * @return int error code
- ************************************************************/
-int CreateTextStorage(struct Storage* info, struct ErrorInfo* error, const char* FILE_NAME);
+FILE* OpenFile(const char* file_name, const char* mode, error_t* error);
 
-/************************************************************//**
- * @brief Clears file from text in it
- *
- * @param[in] FILE_NAME file name
- * @return true if file cleared succesfully
- * @return false if there was an error while clearing file
- ************************************************************/
-bool EraseFile(const char* FILE_NAME);
-
-/************************************************************//**
- * @brief Prints buffer
- *
- * @param[in] stream stream, where buffer is printing
- * @param[in] buf buffer
- * @param[in] buf_len length of buffer
- ************************************************************/
-void PrintBuf(FILE* stream, const char* buf, const size_t buf_len);
-
-/************************************************************//**
- * @brief Prints header
- *
- * @param[in] stream stream, where header is printing
- * @param[in] header header
- * @return true if header printed succesfully
- * @return false if there was an error
- ************************************************************/
-bool PrintHeader(FILE* stream, const char* header);
-
-/************************************************************//**
- * @brief Prints separator
- *
- * @param[in] stream stream, where separator is printing
- * @return true if separator printed succesfully
- * @return false if there was an error
- ************************************************************/
-bool PrintSeparator(FILE* stream);
-
-/************************************************************//**
- * @brief Destructs a Text Storage object
- *
- * @param[in] info storage
- ************************************************************/
-inline void DestructTextStorage(struct Storage* info)
-{
-    free(info->lines);
-    free(info->buf);
-}
-
-FILE* OpenInputFile(const char* input_file, Storage* info, ErrorInfo* error);
-FILE* OpenOutputFile(const char* output_file, ErrorInfo* error);
-FILE* OpenBinOutputFile(const char* output_file, ErrorInfo* error);
-
-int AllocateBuf(FILE* fp, char** buf, const off_t buf_len, struct ErrorInfo* error);
 
 #endif

@@ -7,15 +7,16 @@
 #include <math.h>
 
 #include "assembler.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
+#include "../common/file_read.h"
 
-static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info, label_t* labels);
+static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, LinesStorage* text_info, label_t* labels);
 static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte);
 
 // ::::::::::::: LABELS FUNCS :::::::::::::
 
 static void InitLabelsArray(label_t* labels, size_t size);
-static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, Storage* text_info);
+static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, LinesStorage* text_info);
 static int FindLabelInArray(const label_t* labels, const char* label_name);
 
 // ::::::::::::::::::::::::::::::::::::::::
@@ -46,7 +47,7 @@ static inline void LogPrintIntInBytes(const int* value);
 
 // -----------------------------------------------------------------------------------
 
-AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, Storage* info)
+AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, LinesStorage* info)
 {
 
     AsmErrors error = AsmErrors::NONE;
@@ -95,7 +96,7 @@ AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, Storage* info)
                 }                                                                           \
                 else
 
-static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Storage* text_info, label_t* labels)
+static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, LinesStorage* text_info, label_t* labels)
 {
     assert(labels);
     assert(byte_buf);
@@ -346,7 +347,7 @@ static void InitLabelsArray(label_t* labels, size_t size)
 
 //------------------------------------------------------------------
 
-static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, Storage* text_info)
+static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, LinesStorage* text_info)
 {
     assert(labels);
     assert(text_info);

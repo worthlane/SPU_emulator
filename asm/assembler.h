@@ -5,8 +5,9 @@
 
 #include "../common/asm_common.h"
 #include "../common/input_and_output.h"
+#include "../common/file_read.h"
 
-AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, Storage* info);
+AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, LinesStorage* info);
 
 struct LabelInfo
 {

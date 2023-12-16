@@ -17,7 +17,7 @@ BUILD_DIR = ../build/bin
 OBJECTS_DIR = ../build/asm
 COMMON_DIR = ../common
 SOURCES = main.cpp assembler.cpp
-OUT_SOURCES = ../common/log_funcs.cpp ../common/errors.cpp ../common/input_and_output.cpp ../common/asm_common.cpp
+OUT_SOURCES = ../common/logs.cpp ../common/errors.cpp ../common/input_and_output.cpp ../common/asm_common.cpp ../common/file_read.cpp
 OBJECTS = $(SOURCES:%.cpp=$(OBJECTS_DIR)/%.o)
 OUT_OBJECTS = $(OUT_SOURCES:$(COMMON_DIR)/%.cpp=$(OBJECTS_DIR)/%.o)
 

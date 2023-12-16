@@ -2,7 +2,7 @@
 #include <assert.h>
 
 #include "stack.h"
-#include "../common/log_funcs.h"
+#include "../common/logs.h"
 #include "../common/hash.h"
 
 // ============= STATIC FUNCS ===============
