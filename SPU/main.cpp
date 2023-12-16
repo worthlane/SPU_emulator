@@ -4,28 +4,31 @@
 #include "stack.h"
 #include "../common/logs.h"
 #include "../common/types.h"
+#include "../common/input_and_output.h"
+#include "../common/file_read.h"
 #include "../common/hash.h"
-#include "SPU.h"
+#include "spu.h"
 
 int main(const int argc, const char* argv[])
 {
     OpenLogFile(argv[0]);
 
-    ErrorInfo error = {ERRORS::NONE};
+    ErrorInfo error = {};
 
     spu_t spu = {};
 
-    if (argc == 1)
-        SPUCtor(&error, &spu);
-    else
-        SPUCtor(&error, &spu, argv[1]);
+    const char* file_name = GetFileName(argc, argv, 1, "BYTE CODE", &error);
+
+    FILE* in_stream = OpenFile(file_name, "rb", &error);
+
+    SPUCtor(&spu, file_name, in_stream, &error);
 
     EXIT_IF_ERROR(&error);
 
     RunSPU(&spu);
 
     if (spu.status != SPUErrors::NONE)
-        error.code  = ERRORS::SPU_ERROR;
+        error.code  = (int) ERRORS::SPU_ERROR;
 
     EXIT_IF_ERROR(&error);
 

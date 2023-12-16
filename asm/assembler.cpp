@@ -192,7 +192,7 @@ static AsmErrors HandleCommand(const int command_id, const int arg_type, code_t*
     {
         return GetRegOrIntArgument(&cmd, byte_buf, position, line_ptr, cmd_len);
     }
-    if (arg_type != ArgumentType::NONE)
+    if (arg_type == ArgumentType::NONE)
     {
         AddValueInByteCode(byte_buf, position, &cmd);
 
@@ -231,10 +231,9 @@ static AsmErrors GetLabelOrIntArgument(int* cmd, code_t* byte_buf, size_t* posit
             return AsmErrors::UNKNOWN_LABEL;
 
         value = labels[label_id].jmp_byte;
-
-        *cmd = *cmd | LABEL_ARG;
     }
 
+    *cmd = *cmd | NUM_ARG;
     *cmd_len += read_symbols;
     AddValueInByteCode(byte_buf, position, cmd);
     AddValueInByteCode(byte_buf, position, &value);
@@ -281,9 +280,10 @@ static AsmErrors GetRegOrIntArgument(int* cmd, code_t* byte_buf, size_t* positio
 
         *cmd = *cmd | REG_ARG;
     }
+    else
+        *cmd = *cmd | NUM_ARG;
 
     *cmd_len += read_symbols;
-
     AddValueInByteCode(byte_buf, position, cmd);
     AddValueInByteCode(byte_buf, position, &val);
 

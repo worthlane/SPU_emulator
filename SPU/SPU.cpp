@@ -50,25 +50,13 @@ static inline elem_t Sin(elem_t val);
 
 //-------------------------------------------------------------
 
-ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO переместить еррор
+ERRORS SPUCtor(spu_t* spu, const char* file_name, FILE* fp, ErrorInfo* error) // TODO переместить еррор
 {
-    // ============================= OPEN FILE
-
-    FILE* fp = fopen(file_name, "rb");
-
-    if (fp == NULL)
-    {
-        error->data = file_name;
-        return (error->code = ERRORS::OPEN_FILE);
-    }
-
-    // ====================================== убрать из стора в мейн
-
-    error->code = (ERRORS) StackCtor(&(spu->stack));
-    RETURN_IF_ERROR(error->code);
+    error->code = StackCtor(&(spu->stack));
+    RETURN_IF_ERROR((ERRORS) error->code);
 
     code_t* byte_buf = SPUByteBufferCtor(fp, file_name, error);
-    RETURN_IF_ERROR(error->code);
+    RETURN_IF_ERROR((ERRORS) error->code);
 
     spu->byte_buf        = byte_buf;
     spu->position        = 0;
@@ -83,15 +71,15 @@ ERRORS SPUCtor(ErrorInfo* error, spu_t* spu, const char* file_name) // TODO пе
         return ERRORS::SPU_ERROR;
     }
 
-    return error->code;
+    return (ERRORS) error->code;
 }
 
 //-------------------------------------------------------------
 
 ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 {
-    error->code = (ERRORS) StackDtor(&(spu->stack));
-    RETURN_IF_ERROR(error->code);
+    error->code = StackDtor(&(spu->stack));
+    RETURN_IF_ERROR((ERRORS) error->code);
 
     memset(spu->registers, 0, sizeof(register_t) * REG_AMT);
 
@@ -105,7 +93,7 @@ ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
     spu->position        = 0;
     spu->status          = SPUErrors::DESTRUCTED;
 
-    return error->code;
+    return (ERRORS) error->code;
 }
 
 //-------------------------------------------------------------
@@ -121,8 +109,14 @@ SPUErrors RunSPU(spu_t* spu)
     {
         CHECK_SPU(spu);
 
-        CommandCode command_code = (CommandCode) spu->byte_buf[spu->position];
+        long long cmd = spu->byte_buf[spu->position];
         spu->position++;
+
+        long long arg_params = (cmd & RAM_ARG) + (cmd & NUM_ARG) + (cmd & REG_ARG);
+
+        cmd = cmd - (cmd & (RAM_ARG | NUM_ARG | REG_ARG));
+
+        CommandCode command_code =  (CommandCode) cmd;
 
         bool quit_cycle_flag = false;
         switch (command_code)
@@ -318,7 +312,7 @@ int SPUDump(FILE* fp, const void* spu_ptr, const char* func, const char* file, c
 
     const spu_t* spu = (const spu_t*) spu_ptr;
 
-    LOG_START_MOD(func, file, line);
+    LOG_START_DUMP(func, file, line);
 
     fprintf(fp, "v--------- DUMPING STACK -------v\n");
 
@@ -371,7 +365,7 @@ static code_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* err
 
     if (byte_buf == nullptr)
     {
-        error->code = ERRORS::ALLOCATE_MEMORY;
+        error->code = (int) ERRORS::ALLOCATE_MEMORY;
         return nullptr;
     }
 
@@ -380,7 +374,7 @@ static code_t* SPUByteBufferCtor(FILE* fp, const char* file_name, ErrorInfo* err
     if (read == 0)
     {
         error->data = (char*) file_name;
-        error->code = ERRORS::READ_FILE;
+        error->code = (int) ERRORS::READ_FILE;
 
         return nullptr;
     }

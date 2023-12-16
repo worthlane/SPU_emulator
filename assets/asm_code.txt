@@ -1,7 +1,85 @@
-push 467
-push [228]
-push [rcx]
-jmp :5
-:5
-jmp 5
-push 3
+in
+in
+in
+pop rcx
+pop rbx
+pop rax
+
+push rbx
+push rbx
+mul
+push 4
+push rax
+push rcx
+mul
+mul
+sub
+
+pop rdx
+
+push 0
+push rdx
+jb :no_roots
+
+push 0
+push rdx
+je :one_root
+
+push 0
+push rdx
+ja :two_roots
+
+:hlt
+HLT
+
+:no_roots
+    push 0
+    out
+jmp :hlt
+
+:one_root
+    push 1
+    out
+
+    push -1
+    push rbx
+    mul
+    push rdx
+    sqrt
+    add
+    push 2
+    push rax
+    mul
+    div
+    out
+jmp :hlt
+
+:two_roots
+    push 2
+    out
+
+    push -1
+    push rbx
+    mul
+    push rdx
+    sqrt
+    add
+    push 2
+    push rax
+    mul
+    div
+    out
+
+    push -1
+    push rbx
+    mul
+    push rdx
+    sqrt
+    sub
+    push 2
+    push rax
+    mul
+    div
+    out
+
+jmp :hlt

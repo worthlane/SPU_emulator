@@ -395,7 +395,7 @@ int StackDump(FILE* fp, const void* stack, const char* func, const char* file, c
 
     const Stack_t* stk = (const Stack_t*) stack;
 
-    LOG_START_MOD(func, file, line);
+    LOG_START_DUMP(func, file, line);
 
     fprintf(fp, "Stack                > [%p]\n"
                 "size                 > %zu\n"

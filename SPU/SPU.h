@@ -19,6 +19,8 @@ enum class SPUErrors
     EMPTY_REGISTER,
     UNKNOWN_PUSH_MODE,
 
+    OUT_RAM_SIZE,
+
     PUSH_ERROR,
     POP_ERROR,
 
@@ -34,13 +36,17 @@ enum class SPUErrors
     DESTRUCTED
 };
 
+static const size_t RAM_SIZE = 1000;
+
 struct SPUInfo
 {
     Stack_t     stack;
 
+    elem_t      ram[RAM_SIZE];
+
     const char* file_name;
     FILE*       fp;
-    code_t*    byte_buf;
+    code_t*     byte_buf;
     size_t      position;
 
     elem_t      registers[REG_AMT];
@@ -79,10 +85,9 @@ do                                                                              
     }                                                                                       \
 } while(0)
 
-static const char* DEFAULT_IN  = "/Users/amigo/Documents/GitHub/SPU_emulator/assets/byte_code.bin";
+ERRORS SPUCtor(spu_t* spu, const char* file_name, FILE* in_stream, ErrorInfo* error);
+ERRORS SPUDtor(ErrorInfo* error, spu_t* spu);
 
-ERRORS SPUCtor(ErrorInfo* error, spu_t* spu_info, const char* file_name = DEFAULT_IN);
-ERRORS SPUDtor(ErrorInfo* error, spu_t* spu_info);
 SPUErrors RunSPU(spu_t* spu_info);
 
 SPUErrors SPUVerify(spu_t* spu, const char* func, const char* file, const int line);

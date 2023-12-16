@@ -20,16 +20,32 @@ DEF_CMD(OUT, 1, ArgumentType::NONE, 4,
 
 DEF_CMD(PUSH, 2, ArgumentType::NO_LABELS, 8,
 {
-    PushInfo push = {};
-
-    push.reg = (unsigned int) spu->byte_buf[spu->position++];
-    push.val = (elem_t)       spu->byte_buf[spu->position++];
+    long long push = spu->byte_buf[spu->position++];
 
     elem_t val = POISON;
 
-    spu->status = HandlePushInfo(spu, &val, &push);
-    if (spu->status != SPUErrors::NONE)
-        break;
+    if ((arg_params & REG_ARG) != 0)
+    {
+        AsmErrors reg_err = VerifyRegister((RegisterCode) push);
+        if (reg_err != AsmErrors::NONE)
+            return (SPUErrors::UNKNOWN_REGISTER);
+
+        if (spu->registers[push] == POISON)
+            return (SPUErrors::EMPTY_REGISTER);
+
+        val = spu->registers[push];
+    }
+    else if ((arg_params & NUM_ARG) != 0)
+    {
+        val = push * MULTIPLIER;
+    }
+    else if ((arg_params & RAM_ARG) != 0)
+    {
+        if (val < 0 || val >= RAM_SIZE)
+            return SPUErrors::OUT_RAM_SIZE;
+
+        val = spu->ram[val];
+    }
 
     ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
@@ -51,18 +67,32 @@ DEF_CMD(POP, 4, ArgumentType::NO_LABELS, 8,
 {
     ERRORS error = ERRORS::NONE;
 
-    RegisterCode reg = (RegisterCode) spu->byte_buf[spu->position++];
-
-    AsmErrors reg_err = VerifyRegister(reg);
-    if (reg_err != AsmErrors::NONE)
-        spu->status = SPUErrors::UNKNOWN_REGISTER;
+    long long pos = spu->byte_buf[spu->position++];
 
     elem_t val1 = POISON;
 
     error = (ERRORS) StackPop(&(spu->stack), &val1);
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);
 
-    spu->registers[reg] = val1;
+    if ((arg_params & REG_ARG) != 0)
+    {
+        AsmErrors reg_err = VerifyRegister((RegisterCode) pos);
+        if (reg_err != AsmErrors::NONE)
+            return (SPUErrors::UNKNOWN_REGISTER);
+
+        spu->registers[pos] = val1;
+    }
+    else if ((arg_params & NUM_ARG) != 0)
+    {
+        return (SPUErrors::UNKNOWN_COMMAND);
+    }
+    else if ((arg_params & RAM_ARG) != 0)
+    {
+        if (pos < 0 || pos >= RAM_SIZE)
+            return SPUErrors::OUT_RAM_SIZE;
+
+        spu->ram[pos] = val1;
+    }
 })
 
 // ====== ARITHMETICS CMDS =======

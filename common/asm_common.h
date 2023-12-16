@@ -108,7 +108,7 @@ struct PushInfo
 //---------------------------------------
 
 static const int RAM_ARG   = 1 << 5;
-static const int LABEL_ARG = 1 << 6;
+static const int NUM_ARG   = 1 << 6;
 static const int REG_ARG   = 1 << 7;
 
 char* PrintRemainingString(const char* const source, char* dest);
