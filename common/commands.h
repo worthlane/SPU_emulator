@@ -2,12 +2,12 @@
 #define DEF_CMD(...) ;
 #endif
 
-DEF_CMD(HLT, -1, ArgumentType::NONE, 4,
+DEF_CMD(HLT, 0, ArgumentType::NONE, 4,
 {
     return (spu->status = SPUErrors::NONE);
 })
 
-DEF_CMD(OUT, 1000 - 7, ArgumentType::NONE, 4,
+DEF_CMD(OUT, 1, ArgumentType::NONE, 4,
 {
     elem_t val = POISON;
 
@@ -18,7 +18,7 @@ DEF_CMD(OUT, 1000 - 7, ArgumentType::NONE, 4,
         printf("%g\n", (double) val / MULTIPLIER);
 })
 
-DEF_CMD(PUSH, 993 - 7, ArgumentType::REG_OR_INT, 12,
+DEF_CMD(PUSH, 2, ArgumentType::NO_LABELS, 8,
 {
     PushInfo push = {};
 
@@ -35,7 +35,7 @@ DEF_CMD(PUSH, 993 - 7, ArgumentType::REG_OR_INT, 12,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
 })
 
-DEF_CMD(IN, 986 - 7, ArgumentType::NONE, 4,
+DEF_CMD(IN, 3, ArgumentType::NONE, 4,
 {
     ERRORS error = ERRORS::NONE;
     elem_t val = POISON;
@@ -47,7 +47,7 @@ DEF_CMD(IN, 986 - 7, ArgumentType::NONE, 4,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
 })
 
-DEF_CMD(POP, 979 - 7, ArgumentType::REG, 8,
+DEF_CMD(POP, 4, ArgumentType::NO_LABELS, 8,
 {
     ERRORS error = ERRORS::NONE;
 
@@ -90,19 +90,19 @@ DEF_CMD(POP, 979 - 7, ArgumentType::REG, 8,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);    \
 }
 
-DEF_CMD(SUB, 972 - 7, ArgumentType::NONE, 4,
+DEF_CMD(SUB, 5, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(ADD, 965 - 7, ArgumentType::NONE, 4,
+DEF_CMD(ADD, 6, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(MUL, 958 - 7, ArgumentType::NONE, 4,
+DEF_CMD(MUL, 7, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
-DEF_CMD(DIV, 951 - 7, ArgumentType::NONE, 4,
+DEF_CMD(DIV, 8, ArgumentType::NONE, 4,
 {
     TWO_ELEM_ARITHM(command_code)
 })
@@ -128,22 +128,22 @@ DEF_CMD(DIV, 951 - 7, ArgumentType::NONE, 4,
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(error, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);    \
 }
 
-DEF_CMD(SQRT, 944 - 7, ArgumentType::NONE, 4,
+DEF_CMD(SQRT, 9, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
-DEF_CMD(SIN, 937 - 7, ArgumentType::NONE, 4,
+DEF_CMD(SIN, 10, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
-DEF_CMD(COS, 930 - 7, ArgumentType::NONE, 4,
+DEF_CMD(COS, 11, ArgumentType::NONE, 4,
 {
     ONE_ELEM_ARITHM(command_code);
 })
 
 // ================================
 
-DEF_CMD(SPEAK, 923 - 7, ArgumentType::NONE, 4,
+DEF_CMD(SPEAK, 12, ArgumentType::NONE, 4,
 {
     system("say i love counter strike 2");
 
@@ -152,7 +152,7 @@ DEF_CMD(SPEAK, 923 - 7, ArgumentType::NONE, 4,
 
 // ............. JMP ..............
 
-DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
+DEF_CMD(JMP, 13, ArgumentType::HAS_LABELS, 8,
 {
     code_t start = spu->byte_buf[spu->position++] / sizeof(int);
 
@@ -164,7 +164,7 @@ DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
 
 #endif
 #define MAKE_COND_JMP(name, id, operation)                                                                  \
-        DEF_CMD(name, id, ArgumentType::LABEL_OR_INT, 8,                                                    \
+        DEF_CMD(name, id, ArgumentType::HAS_LABELS, 8,                                                    \
         {                                                                                                   \
             code_t start = spu->byte_buf[spu->position++] / sizeof(int);                                    \
                                                                                                             \
@@ -183,12 +183,12 @@ DEF_CMD(JMP, 916 - 7, ArgumentType::LABEL_OR_INT, 8,
                 spu->position = start;                                                                      \
         })
 
-MAKE_COND_JMP(JA, 909 - 7, >)
-MAKE_COND_JMP(JAE, 902 - 7, >=)
-MAKE_COND_JMP(JB, 895 - 7, <)
-MAKE_COND_JMP(JBE, 888 - 7, <=)
-MAKE_COND_JMP(JNE, 881 - 7, !=)
-MAKE_COND_JMP(JE, 874 - 7, ==)
+MAKE_COND_JMP(JA, 14, >)
+MAKE_COND_JMP(JAE, 15, >=)
+MAKE_COND_JMP(JB, 16, <)
+MAKE_COND_JMP(JBE, 17, <=)
+MAKE_COND_JMP(JNE, 18, !=)
+MAKE_COND_JMP(JE, 19, ==)
 
 #undef MAKE_COND_JMP
 

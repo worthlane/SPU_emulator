@@ -37,7 +37,7 @@ $(OBJECTS_DIR)/%.o: %.cpp
 
 clean:
 	rm -rf $(EXECUTABLE) $(OBJECTS_DIR)/*.o *.o
-	rm -rf *.log
+	rm -rf *.log *.html
 
 makedirs:
 	mkdir -p $(BUILD_DIR)

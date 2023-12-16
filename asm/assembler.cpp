@@ -10,6 +10,8 @@
 #include "../common/logs.h"
 #include "../common/file_read.h"
 
+static const size_t BYTE_SIZE = 4;
+
 static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, LinesStorage* text_info, label_t* labels);
 static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte);
 
@@ -23,20 +25,15 @@ static int FindLabelInArray(const label_t* labels, const char* label_name);
 
 // ============ ARGUMENTS FUNCS ============
 
-static AsmErrors HandleCmdArguments(const int id, code_t* byte_buf, size_t* position,
+static AsmErrors HandleCommand(const int command_id, const int arg_type, code_t* byte_buf, size_t* position,
                                     char* line_ptr, size_t* cmd_len, label_t* labels);
 
-static AsmErrors GetLabelOrIntArgument(code_t* byte_buf, size_t* position,
-                                  char* line_ptr, size_t* cmd_len, label_t* labels);
-static AsmErrors GetRegOrIntArgument(code_t* byte_buf, size_t* position,
-                                char* line_ptr, size_t* cmd_len);
-static AsmErrors GetRegArgument(code_t* byte_buf, size_t* position,
-                                char* line_ptr, size_t* cmd_len);
-
+static AsmErrors GetLabelOrIntArgument(int* cmd, code_t* byte_buf, size_t* position,
+                                       char* line_ptr, size_t* cmd_len, label_t* labels);
+static AsmErrors GetRegOrIntArgument(int* cmd, code_t* byte_buf, size_t* position,
+                                     char* line_ptr, size_t* cmd_len);
 
 // =========================================
-
-static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len);
 
 static inline void PrintBytesInTXT(FILE* out_stream, code_t* byte_buf, size_t byte_amt);
 static inline void PrintBytesInBIN(const void* buf, size_t size,
@@ -79,20 +76,14 @@ AsmErrors Assembly(FILE* out_stream, FILE* out_bin_stream, LinesStorage* info)
 
 //-----------------------------------------------------------------
 
-#define DEF_CMD(name, id, arg_type, byte_size,  ...)                                        \
+#define DEF_CMD(name, id, arg_type,  ...)                                        \
                 if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                          \
                 {                                                                           \
-                    byte_buf[(*position)++] = (code_t) CommandCode::ID_##name;              \
+                    error = HandleCommand((int) CommandCode::ID_##name,(int) arg_type, byte_buf,    \
+                                           position, text_info->lines[line].string, &cmd_len,       \
+                                           labels);                                             \
+                    RETURN_IF_ASMERROR(error);                                              \
                                                                                             \
-                    LogPrintIntInBytes(&byte_buf[*position - 1]);                           \
-                                                                                            \
-                    if (arg_type != ArgumentType::NONE)                                     \
-                    {                                                                       \
-                        error = HandleCmdArguments((int) arg_type, byte_buf, position,      \
-                                                   text_info->lines[line].string, &cmd_len, \
-                                                   labels);                                 \
-                        RETURN_IF_ASMERROR(error);                                          \
-                    }                                                                       \
                 }                                                                           \
                 else
 
@@ -113,7 +104,7 @@ static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Lin
 
     for (size_t line = 0; line < text_info->line_amt; line++)
     {
-        if (text_info->lines[line].string[0] == ':')
+        if (text_info->lines[line].string[0] == ':')    // TODO если сделать таб перед двоеточием то не сработает
             continue;
 
         char command[MAX_COMMAND_LEN] = "";
@@ -146,46 +137,7 @@ static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Lin
 
 //------------------------------------------------------------------
 
-static RegisterCode GetRegister(char* line_ptr, size_t* cmd_len)
-{
-    assert(line_ptr);
-    assert(cmd_len);
-
-    char   reg[MAX_REG_LEN] = "";
-    size_t read_symbols     = 0;
-    sscanf(line_ptr + *cmd_len, "%s%n", reg, &read_symbols);
-
-    *cmd_len += read_symbols;
-
-    RegisterCode reg_code = TranslateRegisterToByte(reg);
-
-    return reg_code;
-}
-
-//------------------------------------------------------------------
-
-static AsmErrors HandleCmdArguments(const int arg_type, code_t* byte_buf, size_t* position,
-                                    char* line_ptr, size_t* cmd_len, label_t* labels)
-{
-    assert(labels);
-    assert(byte_buf);
-    assert(position);
-    assert(cmd_len);
-    assert(line_ptr);
-
-    if (arg_type == (int) ArgumentType::REG_OR_INT)
-        return GetRegOrIntArgument(byte_buf, position, line_ptr, cmd_len); // можно ли так писать?
-    else if (arg_type == (int) ArgumentType::REG)
-        return GetRegArgument(byte_buf, position, line_ptr, cmd_len);
-    else if (arg_type == (int) ArgumentType::LABEL_OR_INT)
-        return GetLabelOrIntArgument(byte_buf, position, line_ptr, cmd_len, labels);
-
-    return AsmErrors::NONE;
-}
-
-//------------------------------------------------------------------
-
-static AsmErrors GetLabelOrIntArgument(code_t* byte_buf, size_t* position,
+static AsmErrors GetLabelArgument(code_t* byte_buf, size_t* position,
                                        char* line_ptr, size_t* cmd_len, label_t* labels)
 {
     assert(labels);
@@ -221,7 +173,78 @@ static AsmErrors GetLabelOrIntArgument(code_t* byte_buf, size_t* position,
 
 //------------------------------------------------------------------
 
-static AsmErrors GetRegOrIntArgument(code_t* byte_buf, size_t* position,
+static AsmErrors HandleCommand(const int command_id, const int arg_type, code_t* byte_buf, size_t* position,
+                                    char* line_ptr, size_t* cmd_len, label_t* labels)
+{
+    assert(labels);
+    assert(byte_buf);
+    assert(position);
+    assert(cmd_len);
+    assert(line_ptr);
+
+    int cmd = command_id;
+
+    if (arg_type == ArgumentType::HAS_LABELS)
+    {
+        return GetLabelOrIntArgument(&cmd, byte_buf, position, line_ptr, cmd_len, labels);
+    }
+    if (arg_type == ArgumentType::NO_LABELS)
+    {
+        return GetRegOrIntArgument(&cmd, byte_buf, position, line_ptr, cmd_len);
+    }
+    if (arg_type != ArgumentType::NONE)
+    {
+        AddValueInByteCode(byte_buf, position, &cmd);
+
+        return AsmErrors::NONE;
+    }
+
+    return AsmErrors::NONE;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors GetLabelOrIntArgument(int* cmd, code_t* byte_buf, size_t* position,
+                                       char* line_ptr, size_t* cmd_len, label_t* labels)
+{
+    assert(labels);
+    assert(byte_buf);
+    assert(position);
+    assert(cmd_len);
+    assert(line_ptr);
+
+    size_t read_symbols = 0;
+    int    value        = 0;
+
+    char label_name[MAX_LABEL_NAME] = "";
+    int read = sscanf(line_ptr + *cmd_len, " :%s%n", label_name, &read_symbols);
+
+    if (read == 0)
+    {
+        bool success = sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
+        if (!success) {PrintLog("CAN NOT READ INT LABEL\n"); return AsmErrors::UNKNOWN_LABEL; }
+    }
+    else
+    {
+        int label_id = FindLabelInArray(labels, label_name);
+        if (label_id == -1)
+            return AsmErrors::UNKNOWN_LABEL;
+
+        value = labels[label_id].jmp_byte;
+
+        *cmd = *cmd | LABEL_ARG;
+    }
+
+    *cmd_len += read_symbols;
+    AddValueInByteCode(byte_buf, position, cmd);
+    AddValueInByteCode(byte_buf, position, &value);
+
+    return AsmErrors::NONE;
+}
+
+//------------------------------------------------------------------
+
+static AsmErrors GetRegOrIntArgument(int* cmd, code_t* byte_buf, size_t* position,
                                      char* line_ptr, size_t* cmd_len)
 {
     assert(byte_buf);
@@ -229,51 +252,40 @@ static AsmErrors GetRegOrIntArgument(code_t* byte_buf, size_t* position,
     assert(cmd_len);
     assert(line_ptr);
 
-    elem_t value        = 0;
-    size_t read_symbols = 0;
-    int    read  = sscanf(line_ptr + *cmd_len, "%ld%n", &value, &read_symbols);
+    size_t read_symbols           = 0;
+    char   string[MAX_STRING_LEN] = "";
+    char*  word = string;
+    char*  end  = nullptr;
 
-    int reg_flag = false;
-    int val      = 0;
+    int    read = sscanf(line_ptr + *cmd_len, "%s%n", string, &read_symbols);
+    size_t len  = strlen(word);
 
-    if (read == 0)
+    if (string[0] == '[' && string[len - 1] == ']')
     {
-        RegisterCode reg_code = GetRegister(line_ptr, cmd_len);
+        string[len - 1] = '\0';
+        word = string + 1;
+        *cmd = *cmd | RAM_ARG;
+
+        len = strlen(word);
+    }
+
+    int val = strtol(word, &end, 10);
+
+    if (val == 0 && end != word + len)
+    {
+        RegisterCode reg_code = TranslateRegisterToByte(word);
         if (reg_code == RegisterCode::unk)
             return AsmErrors::INVALID_REGISTER;
 
-        reg_flag = true;
-        val      = (int) reg_code;
-    }
-    else
-    {
-        reg_flag = false;
-        val      = value;
+        val = (int) reg_code;
 
-        *cmd_len += read_symbols;
+        *cmd = *cmd | REG_ARG;
     }
 
-    AddValueInByteCode(byte_buf, position, &reg_flag);
+    *cmd_len += read_symbols;
+
+    AddValueInByteCode(byte_buf, position, cmd);
     AddValueInByteCode(byte_buf, position, &val);
-
-    return AsmErrors::NONE;
-}
-
-//------------------------------------------------------------------
-
-static AsmErrors GetRegArgument(code_t* byte_buf, size_t* position,
-                                    char* line_ptr, size_t* cmd_len)
-{
-    assert(byte_buf);
-    assert(position);
-    assert(cmd_len);
-    assert(line_ptr);
-
-    int reg_code = (int) GetRegister(line_ptr, cmd_len);
-    if (reg_code == (int) RegisterCode::unk)
-        return AsmErrors::INVALID_REGISTER;
-
-    AddValueInByteCode(byte_buf, position, &reg_code);
 
     return AsmErrors::NONE;
 }
@@ -390,7 +402,10 @@ static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, LinesStorage* 
 #define DEF_CMD(name, id, arg_type, byte_size, ...)                                  \
                 if (!strncasecmp(command, #name, MAX_COMMAND_LEN))                          \
                 {                                                                           \
-                    *curr_byte += byte_size;                                                \
+                    *curr_byte += BYTE_SIZE;                                                \
+                                                                                            \
+                    if (arg_type != ArgumentType::NONE)                                     \
+                        *curr_byte += BYTE_SIZE;                                            \
                 }                                                                           \
                 else
 

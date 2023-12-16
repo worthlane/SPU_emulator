@@ -93,10 +93,10 @@ static const size_t MAX_WORD_LEN = 64;
 enum ArgumentType
 {
     NONE = 0,
-    INT,
-    LABEL_OR_INT,
-    REG,
-    REG_OR_INT
+
+    HAS_LABELS,
+
+    NO_LABELS,
 };
 
 struct PushInfo
@@ -106,6 +106,10 @@ struct PushInfo
 };
 
 //---------------------------------------
+
+static const int RAM_ARG   = 1 << 5;
+static const int LABEL_ARG = 1 << 6;
+static const int REG_ARG   = 1 << 7;
 
 char* PrintRemainingString(const char* const source, char* dest);
 AsmErrors SyntaxCheckRemainingString(const char* const source);
