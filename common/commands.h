@@ -4,6 +4,7 @@
 
 DEF_CMD(HLT, 0, ArgumentType::NONE, 4,
 {
+    quit_cycle_flag = true;
     return (spu->status = SPUErrors::NONE);
 })
 
@@ -34,18 +35,24 @@ DEF_CMD(PUSH, 2, ArgumentType::NO_LABELS, 8,
             return (SPUErrors::EMPTY_REGISTER);
 
         val = spu->registers[push];
+
+        if (arg_params & RAM_ARG != 0)
+            val = spu->ram[val];
     }
     else if ((arg_params & NUM_ARG) != 0)
     {
-        val = push * MULTIPLIER;
-    }
-    else if ((arg_params & RAM_ARG) != 0)
-    {
-        if (val < 0 || val >= RAM_SIZE)
-            return SPUErrors::OUT_RAM_SIZE;
+        if ((arg_params & RAM_ARG) != 0)
+        {
+            if (push >= RAM_SIZE || push < 0)
+                return SPUErrors::OUT_RAM_SIZE;
 
-        val = spu->ram[val];
+            val = spu->ram[push];
+        }
+        else
+            val = push * MULTIPLIER;
     }
+
+    assert(val != POISON);
 
     ERRORS push_err = (ERRORS) StackPush(&(spu->stack), val);
     UPDATE_SPU_STATUS_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
@@ -80,18 +87,22 @@ DEF_CMD(POP, 4, ArgumentType::NO_LABELS, 8,
         if (reg_err != AsmErrors::NONE)
             return (SPUErrors::UNKNOWN_REGISTER);
 
-        spu->registers[pos] = val1;
+        if (arg_params & RAM_ARG != 0)
+            spu->ram[spu->registers[pos]] = val1;
+        else
+            spu->registers[pos] = val1;
+
     }
-    else if ((arg_params & NUM_ARG) != 0)
-    {
-        return (SPUErrors::UNKNOWN_COMMAND);
-    }
-    else if ((arg_params & RAM_ARG) != 0)
+    else if ((arg_params & NUM_ARG) != 0 && (arg_params & RAM_ARG) != 0)
     {
         if (pos < 0 || pos >= RAM_SIZE)
             return SPUErrors::OUT_RAM_SIZE;
 
         spu->ram[pos] = val1;
+    }
+    else
+    {
+        return SPUErrors::UNKNOWN_COMMAND;
     }
 })
 
@@ -221,5 +232,26 @@ MAKE_COND_JMP(JNE, 18, !=)
 MAKE_COND_JMP(JE, 19, ==)
 
 #undef MAKE_COND_JMP
+
+DEF_CMD(CALL, 20, ArgumentType::HAS_LABELS, 8,
+{
+    code_t start = spu->byte_buf[spu->position++] / sizeof(int);
+
+    ERRORS push_err = (ERRORS) StackPush(&(spu->returns), spu->position);
+    UPDATE_SPU_STATUS_IF_NOT_EQUAL(push_err, ERRORS::NONE, SPUErrors::PUSH_ERROR, spu->status);
+
+    spu->position = start;
+})
+
+DEF_CMD(RET, 21, ArgumentType::NONE, 4,
+{
+    elem_t ret = POISON;
+
+    ERRORS pop_err = (ERRORS) StackPop(&(spu->returns), &ret);
+    UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);
+
+    spu->position = ret;
+})
+
 
 // .............................................

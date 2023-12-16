@@ -43,13 +43,14 @@ struct SPUInfo
     Stack_t     stack;
 
     elem_t      ram[RAM_SIZE];
+    elem_t      registers[REG_AMT];
+
+    Stack_t     returns;
 
     const char* file_name;
     FILE*       fp;
     code_t*     byte_buf;
     size_t      position;
-
-    elem_t      registers[REG_AMT];
 
     SPUErrors   status;
 };

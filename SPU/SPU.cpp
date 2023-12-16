@@ -55,6 +55,9 @@ ERRORS SPUCtor(spu_t* spu, const char* file_name, FILE* fp, ErrorInfo* error) //
     error->code = StackCtor(&(spu->stack));
     RETURN_IF_ERROR((ERRORS) error->code);
 
+    error->code = StackCtor(&(spu->returns));
+    RETURN_IF_ERROR((ERRORS) error->code);
+
     code_t* byte_buf = SPUByteBufferCtor(fp, file_name, error);
     RETURN_IF_ERROR((ERRORS) error->code);
 
@@ -79,6 +82,9 @@ ERRORS SPUCtor(spu_t* spu, const char* file_name, FILE* fp, ErrorInfo* error) //
 ERRORS SPUDtor(ErrorInfo* error, spu_t* spu)
 {
     error->code = StackDtor(&(spu->stack));
+    RETURN_IF_ERROR((ERRORS) error->code);
+
+    error->code = StackDtor(&(spu->returns));
     RETURN_IF_ERROR((ERRORS) error->code);
 
     memset(spu->registers, 0, sizeof(register_t) * REG_AMT);
