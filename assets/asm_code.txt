@@ -1,28 +1,11 @@
-in
-pop rax
-
-call :factorial
-
-out
-hlt
-
-:factorial
-    push rax
     push 1
-    jae :fact_stop
+    push 1    % sdanda
 
-    push rax
-
-    push rax
+    je :TRUE  % sdjiadi
+    push 0     %djnasdn
+    jmp :false
+            :TRUE
     push 1
-    sub
-    pop rax
-
-    call :factorial
-    mul
-
-    ret
-
-:fact_stop
-    push 1
-    ret
+        :false
+    out
+    hlt

@@ -15,6 +15,8 @@ static const size_t BYTE_SIZE = 4;
 static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, LinesStorage* text_info, label_t* labels);
 static AsmErrors UpdateCurrByte(char* input_ptr, size_t* curr_byte);
 
+static bool IsTwoDotsInString(const char* str);
+
 // ::::::::::::: LABELS FUNCS :::::::::::::
 
 static void InitLabelsArray(label_t* labels, size_t size);
@@ -104,7 +106,7 @@ static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Lin
 
     for (size_t line = 0; line < text_info->line_amt; line++)
     {
-        if (text_info->lines[line].string[0] == ':')    // TODO если сделать таб перед двоеточием то не сработает
+        if (IsTwoDotsInString(text_info->lines[line].string))
             continue;
 
         char command[MAX_COMMAND_LEN] = "";
@@ -134,6 +136,28 @@ static AsmErrors TranslateTextToByteCode(code_t* byte_buf, size_t* position, Lin
 }
 
 #undef DEF_CMD
+
+//------------------------------------------------------------------
+
+static bool IsTwoDotsInString(const char* str)
+{
+    assert(str);
+
+    int i = 0;
+
+    while (isspace(str[i]))
+        i++;
+
+    while (str[i] != '\0' && !isspace(str[i]))
+    {
+        if (str[i] == ':')
+            return true;
+
+        i++;
+    }
+
+    return false;
+}
 
 //------------------------------------------------------------------
 
@@ -371,7 +395,7 @@ static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, LinesStorage* 
 
     for (size_t line = 0; line < text_info->line_amt; line++)
     {
-        if (text_info->lines[line].string[0] != ':')
+        if (!IsTwoDotsInString(text_info->lines[line].string))
         {
             error = UpdateCurrByte(text_info->lines[line].string, &curr_byte);
             if (error != AsmErrors::NONE)
@@ -384,10 +408,14 @@ static AsmErrors ReadLabelsFromText(label_t* labels, size_t size, LinesStorage* 
             return AsmErrors::TOO_MANY_LABELS;
 
         char   label_name[MAX_LABEL_NAME] = "";
-        sscanf(text_info->lines[line].string, ":%s", label_name);
+        sscanf(text_info->lines[line].string, "%s", label_name);
+        if (label_name[0] != ':')
+            return AsmErrors::UNKNOWN_LABEL;
+
+        char* label = label_name + 1;
 
         labels[labels_read].jmp_byte   = curr_byte;
-        labels[labels_read].label_name = strdup(label_name);
+        labels[labels_read].label_name = strdup(label);
 
         PrintLog("GOT LABEL \"%s\" ON BYTE %d\n", labels[labels_read].label_name, labels[labels_read].jmp_byte);
 

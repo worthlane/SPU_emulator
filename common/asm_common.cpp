@@ -109,6 +109,8 @@ AsmErrors SyntaxCheckRemainingString(const char* const source)
 
     while (*src != '\n' && *src != EOF && *src != '\0')
     {
+        if (*src == '%')
+            return AsmErrors::NONE;
         if (!isspace(*src))
             return AsmErrors::SYNTAX_ERROR;
         src++;
