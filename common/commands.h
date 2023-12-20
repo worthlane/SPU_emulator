@@ -8,15 +8,23 @@ DEF_CMD(HLT, 0, ArgumentType::NONE, 4,
     return (spu->status = SPUErrors::NONE);
 })
 
-DEF_CMD(OUT, 1, ArgumentType::NONE, 4,
+DEF_CMD(OUT, 1, ArgumentType::NO_LABELS, 4,
 {
-    elem_t val = POISON;
+    if ((arg_params & NUM_ARG) != 0)
+    {
+        char ch = spu->byte_buf[spu->position++];
+        printf("%c", (char) ch);
+    }
+    else
+    {
+        elem_t val = POISON;
 
-    ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
-    UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);
+        ERRORS pop_err = (ERRORS) StackPop(&(spu->stack), &val);
+        UPDATE_SPU_STATUS_IF_NOT_EQUAL(pop_err, ERRORS::NONE, SPUErrors::POP_ERROR, spu->status);
 
-    if (val != POISON)
-        printf("%g\n", (double) val / MULTIPLIER);
+        if (val != POISON)
+            printf("%g\n", (double) val / MULTIPLIER);
+    }
 })
 
 DEF_CMD(PUSH, 2, ArgumentType::NO_LABELS, 8,

@@ -283,6 +283,16 @@ static AsmErrors GetRegOrIntArgument(int* cmd, code_t* byte_buf, size_t* positio
     int    read = sscanf(line_ptr + *cmd_len, "%s%n", string, &read_symbols);
     size_t len  = strlen(word);
 
+    // printf("\"%s\", %d\n", string, len);
+
+    if (len == 0)
+    {
+        *cmd_len += read_symbols;
+        AddValueInByteCode(byte_buf, position, cmd);
+        
+        return AsmErrors::NONE;
+    }
+
     if (string[0] == '[' && string[len - 1] == ']')
     {
         string[len - 1] = '\0';

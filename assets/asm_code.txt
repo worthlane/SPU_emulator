@@ -1,11 +1,7 @@
-    push 1
-    push 1    % sdanda
-
-    je :TRUE  % sdjiadi
-    push 0     %djnasdn
-    jmp :false
-            :TRUE
-    push 1
-        :false
-    out
-    hlt
+push 5
+pop [7]
+push [7]
+push [7]
+mul
+out
+hlt
